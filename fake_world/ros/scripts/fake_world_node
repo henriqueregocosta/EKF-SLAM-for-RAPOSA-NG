@@ -101,7 +101,7 @@ class fake_world(object):
         # publish odom message
         return odom_msg
 
-    def compute_observation(self, landmark_list, pose):
+    def compute_observation(self, landmark_list, rpose):
         # ------------------------------
         # given landmark world coordinates,
         # computes the true pose of the landmark in
@@ -109,13 +109,23 @@ class fake_world(object):
         # also decides which landmarks are in the
         # robots field of view -> IMPLEMENT
         # ------------------------------
-        # creates empty MarkerArray message
-        obs=[robot_pose()]
-        obs[0].x = 0
-        obs[0].y = 0
-        obs.append(robot_pose())
-        obs[1].x= 1
-        return obs
+
+        #n=len(landmark_list)
+        #observations=[]
+        #camera_measurement=landmark(0,0,0)
+
+        #for i in range(0,n):
+            # camera_measurement.x=
+            # camera_measurement.y= OBSERVATION MODEL!!!
+         #   if is_in_line_of_sight(rpose, camera_measurement):
+          #      observations.append(camera_measurement)
+        
+        # obs=[robot_pose()]
+        # obs[0].x = 0
+        # obs[0].y = 0
+        # obs.append(robot_pose())
+        # obs[1].x= 1
+        return observations
     
     def translate_obs(self, obs):
         # ------------------------------
@@ -129,6 +139,7 @@ class fake_world(object):
         marker.pose.position.x = obs[0].x
         marker.pose.position.y = obs[0].y
         markerArray.markers.append(marker)
+        marker=Marker()
         marker.pose.position.x = obs[1].x
         marker.pose.position.y = obs[1].y
         markerArray.markers.append(marker)
