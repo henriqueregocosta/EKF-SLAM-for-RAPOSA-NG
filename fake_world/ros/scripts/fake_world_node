@@ -5,41 +5,103 @@ import rospy
 
 from geometry_msgs.msg import Pose
 from nav_msgs.msg import Odometry
+from visualization_msgs.msg import MarkerArray
+from visualization_msgs.msg import Marker
 
 class fake_world(object):
     # ----------------------------------
     # Receives an array of odometry and
     # landmark data and computes the 
     # data to be received by the robot
+    # also receives the type of world and 
+    # trajectory
     # ----------------------------------
-    def __init__(self, 'world_type', 'movement_type'):
+    def __init__(self):
         # register node in ROS network
         rospy.init_node('fake_world', anonymous=False)
         # print message in terminal
         rospy.loginfo('fake_world node is online')
         # setup publishers
-        self.obsPublisher = rospy.Publisher('fake_obs',Pose,queue_size=10)
+        self.obsPublisher = rospy.Publisher('fake_obs',MarkerArray,queue_size=10)
         self.odomPublisher = rospy.Publisher('fake_odom',Odometry,queue_size=10)
         self.posePublisher = rospy.Publisher('fake_pose', Pose, queue_size=10)
 
-    def run_sim(self, landmark_list, trajectory):
-        rospy.loginfo('Simulation running')
+    def run_sim(self, world_type, movement_type):
+        # world creation
+        if world_type=='wall':
+            landmark_list=self.finite_wall(1, 0, 10)
+            rospy.loginfo('inside the 1 if')
+        if movement_type=='straightline':
+            trajectory=self.straightline(3, 0, 0.2, 20)
+        rpose=robot_pose()
+        rpose.x=0
+        rpose.y=0
+        # pose.theta= TODO
+
         i=0 # will be useful for something
         rate = rospy.Rate(0.5) # 0.5 Hz
         while not rospy.is_shutdown():
-            movement=self.compute_movement(position, trajectory)
-            position=self.compute_pose(position, movement)
-            observation=self.compute_observation(landmark_list, position)
+            movement=self.compute_movement(rpose, trajectory, i)
+            rpose=self.compute_pose(rpose, trajectory, i)
+            observation=self.compute_observation(landmark_list,rpose)
             odom_msg=self.translate_odom(movement)
-            pose_msg=self.translate_pose(position)
-            obs_msg=self.translate(observation)
+            pose_msg=self.translate_pose(rpose)
+            obs_msg=self.translate_obs(observation)
             self.odomPublisher.publish(odom_msg)
             self.posePublisher.publish(pose_msg)
             self.obsPublisher.publish(obs_msg)
             i+=1
+            if i==len(trajectory):
+                break
             rate.sleep()
 
-    def compute_observation(self, landmark_list, robot_position):
+    def compute_pose(self, rpose, trajectory, i):
+        # ------------------------
+        # given the robot pose and the trajectory
+        # computes the movement vector
+        # ------------------------
+        pose=robot_pose()
+        pose.x=trajectory[i].x
+        pose.y=trajectory[i].y
+
+        return pose
+
+    def translate_pose(self, rpose):
+        # ------------------------
+        # given the robot pose and the trajectory
+        # computes the movement vector
+        # ------------------------
+        pose_msg=Pose()
+        pose_msg.position.x = rpose.x
+        pose_msg.position.y = rpose.y
+
+        return pose_msg
+
+    def compute_movement(self, rpose, trajectory, i):
+        # ------------------------
+        # given the robot pose and the trajectory
+        # computes the movement vector
+        # ------------------------
+        movement=robot_pose()
+        movement.x=trajectory[i+1].x-trajectory[i].x
+        movement.y=trajectory[i+1].y-trajectory[i].y
+
+        return movement
+
+    def translate_odom(self, movement):
+        # --------------------------------------
+        # translates movement info into odom message
+        # --------------------------------------
+        # creates empty pose message
+        odom_msg=Odometry()
+        odom_msg.pose.pose.position.x = movement.x
+        odom_msg.pose.pose.position.y = movement.y
+        # orientation
+        # missing: quaternion to euler angle transformation
+        # publish odom message
+        return odom_msg
+
+    def compute_observation(self, landmark_list, pose):
         # ------------------------------
         # given landmark world coordinates,
         # computes the true pose of the landmark in
@@ -47,32 +109,63 @@ class fake_world(object):
         # also decides which landmarks are in the
         # robots field of view -> IMPLEMENT
         # ------------------------------
-        # creates empty pose message
-        obs_msg=Pose()
-        obs_msg.position.x = self.x
-        obs_msg.position.y = self.y
-        # publish pose message
-        return obs_msg
+        # creates empty MarkerArray message
+        obs=[robot_pose()]
+        obs[0].x = 0
+        obs[0].y = 0
+        obs.append(robot_pose())
+        obs[1].x= 1
+        return obs
+    
+    def translate_obs(self, obs):
+        # ------------------------------
+        # translate obs vector into marker array
+        # message
+        # -----------------------
 
-    def finite_wall(self, first_lm):
+        # creates empty MarkerArray message
+        marker=Marker()
+        markerArray=MarkerArray()
+        marker.pose.position.x = obs[0].x
+        marker.pose.position.y = obs[0].y
+        markerArray.markers.append(marker)
+        marker.pose.position.x = obs[1].x
+        marker.pose.position.y = obs[1].y
+        markerArray.markers.append(marker)
+        # preturn marker array message
+        return markerArray
+
+    def finite_wall(self, x, y, n):
         # ---------------
         # generates and infite wall of landmarks
         # adds a new landmark with the same x-coordinate
         # of the last one but one unit ahead in the
         # y-axis
         # ---------------
-        wall=first_lm
+        wall=[landmark(x,y,0)]
         i=0
-        while i<10:
-            x=first_lm[i].x
-            y=first_lm[i].y+1;
+        while i<n:
+            x=x
+            y=y+1;
             identif=i+1;
-            new_landmark=landmark_data(x,y,identif)
+            new_landmark=landmark(x,y,identif)
             wall.append(new_landmark)
-
+            i+=1
         return wall
 
-class landmark_data(object):
+    def straightline(self, x, y, step, n):
+        # -------------
+        # generates a list of points that corresponds
+        # to a straight line trajectory with an assign step
+        # -------------
+        identif=0
+        trajectory=[landmark(x,y,identif)]
+        for i in range(0, n):
+            coordinate=landmark(trajectory[i].x, trajectory[i].y+step, i+1)
+            trajectory.append(coordinate)
+        return trajectory
+
+class landmark(object):
     # -------------
     # creates a list of landmarks and their world 
     # todo: translate into code the observation model
@@ -83,53 +176,18 @@ class landmark_data(object):
         self.y=y
         self.id=identif
 
-class odom(object):
-    # -------------
-    # creates a list of odometry movements
-    # -------------
-    def __init__(self,vx,vy):
-        self.x=vx
-        self.y=vy
-
-    def compute_movement(self):
-        # --------------------------------------
-        # simply publishes odometry information
-        # --------------------------------------
-        # creates empty pose message
-        odom_msg=Odometry()
-        odom_msg.pose.pose.position.x = self.x
-        odom_msg.pose.pose.position.y = self.y
-        # orientation
-        # missing: quaternion to euler angle transformation
-        # publish odom message
-        return odom_msg
-
 class robot_pose(object):
     # ----------------
     # represents the current pose of the robot
     # ----------------
-    def __init__(self, vx, vy):
-        self.x=2;
+    def __init__(self):
+        self.x=0;
         self.y=0;
         self.theta=0;
-        self.vx=vx
-        self.vy=vy
-
-    def compute_pose(self):
-        # ------------------------------
-        # returns pose message
-        # ------------------------------
-        # creates empty pose message
-        self.x=self.x+self.vx
-        self.y=self.y+self.vy
-        pose_msg=Pose()
-        pose_msg.position.x = self.x
-        pose_msg.position.y = self.y
-        return pose_msg
 
 def main():
-	fake_world1=fake_world('wall', 'straightline')
-	fake_world1.run_sim()
+    fake_world1=fake_world()
+    fake_world1.run_sim('wall', 'straightline')
 
 if __name__ == '__main__':
     main()
