@@ -1,22 +1,17 @@
-
-# Não sei como é que este import funciona, verificar com o Henrique
-
-from Marker.msg import Marker
-
 class ObsInterp(object):
 
-	def __init__(self):
+    def __init__(self):
         '''
         Class constructor: will get executed at the moment
         of object creation
         '''
-        observed_features = [0 0 0]
 
         rospy.loginfo('Observations Interperter Started')
         # subscribe to RaposaNG ARUCO topic
-        rospy.Subscriber("fake_obs", Marker, self.ARUCOCallback)
+        rospy.Subscriber("fake_obs", MarkerArray, self.ARUCOCallback)
         # define member variable and initialize with a big value
         # it will store the distance from the robot to the walls
+        self.markersisee = [None, None, None]
 
     
     def ARUCOCallback(self, msg):
@@ -24,14 +19,21 @@ class ObsInterp(object):
         This function gets executed everytime a ARUCO Marker msg is received on the
         topic: /fake_obs
         '''
-        ox = msg.pose.position.x
-        oy = msg.pose.position.y
-        oid = msg.id
-        update = [ox oy oid]
-        first = 0
+        observed_features = [None, None, None]
+        N = len(msg.markers)
+        rospy.loginfo(str(N))
 
-        if len(observed_features) == [0 0 0] #if it is the first marker
-        	observed_features = update		 #the vector is the first marker
-    	else
-    		observed_features = mean_pred.append(update) #the marker is added to the vector
+        for i in range(N):
+            ox = msg.markers[i].pose.position.x
+            oy = msg.markers[i].pose.position.y
+            oid = msg.markers[i].id
+            update = [ox, oy, oid]
 
+            if observed_features == [None, None, None]: #if it is the first marker ever observed
+                observed_features = update       #the vector is the first marker
+            else:
+                observed_features.append(update) #the marker is added to the vector
+
+        self.markersisee = observed_features
+        rospy.loginfo('Observed features:')
+        rospy.loginfo(str(observed_features))

@@ -26,11 +26,10 @@ class fake_world(object):
         self.odomPublisher = rospy.Publisher('fake_odom',Odometry,queue_size=10)
         self.posePublisher = rospy.Publisher('fake_pose', Pose, queue_size=10)
 
-    def run_sim(self, world_type, movement_type):
+    def run_sim(self, world_type, movement_type, ObsTranslator):
         # world creation
         if world_type=='wall':
             landmark_list=self.finite_wall(1, 0, 10)
-            rospy.loginfo('inside the 1 if')
         if movement_type=='straightline':
             trajectory=self.straightline(3, 0, 0.2, 20)
         rpose=robot_pose()
@@ -50,6 +49,8 @@ class fake_world(object):
             self.odomPublisher.publish(odom_msg)
             self.posePublisher.publish(pose_msg)
             self.obsPublisher.publish(obs_msg)
+            rospy.loginfo('markers I see:')
+            rospy.loginfo(str(ObsTranslator.markersisee))
             i+=1
             if i==len(trajectory):
                 break
@@ -110,11 +111,9 @@ class fake_world(object):
         # robots field of view -> IMPLEMENT
         # ------------------------------
         # creates empty MarkerArray message
-        obs=[robot_pose()]
-        obs[0].x = 0
-        obs[0].y = 0
-        obs.append(robot_pose())
-        obs[1].x= 1
+        obs=[landmark(0,1,3)]
+        obs.append(landmark(1,3,4))
+
         return obs
     
     def translate_obs(self, obs):
@@ -125,13 +124,27 @@ class fake_world(object):
 
         # creates empty MarkerArray message
         marker=Marker()
+        #rospy.loginfo(str(marker))
         markerArray=MarkerArray()
+        #rospy.loginfo(str(markerArray))
         marker.pose.position.x = obs[0].x
         marker.pose.position.y = obs[0].y
+        marker.id = obs[0].id
         markerArray.markers.append(marker)
+        #rospy.loginfo(str(markerArray))
+        marker=Marker()
         marker.pose.position.x = obs[1].x
         marker.pose.position.y = obs[1].y
+        marker.id = obs[1].id
         markerArray.markers.append(marker)
+        marker=Marker()
+        marker.pose.position.x = 5
+        marker.pose.position.y = 5
+        marker.id = 5
+        markerArray.markers.append(marker)
+        #rospy.loginfo('markerArray com 2')
+        #rospy.loginfo(str(markerArray))
+        #rospy.loginfo(str(markerArray))
         # preturn marker array message
         return markerArray
 
@@ -185,9 +198,52 @@ class robot_pose(object):
         self.y=0;
         self.theta=0;
 
+
+class ObsInterp(object):
+
+    def __init__(self):
+        '''
+        Class constructor: will get executed at the moment
+        of object creation
+        '''
+
+        rospy.loginfo('Observations Interperter Started')
+        # subscribe to RaposaNG ARUCO topic
+        rospy.Subscriber("fake_obs", MarkerArray, self.ARUCOCallback)
+        # define member variable and initialize with a big value
+        # it will store the distance from the robot to the walls
+        self.markersisee = [None, None, None]
+
+    
+    def ARUCOCallback(self, msg):
+        '''
+        This function gets executed everytime a ARUCO Marker msg is received on the
+        topic: /fake_obs
+        '''
+        observed_features = [None, None, None]
+        N = len(msg.markers)
+        rospy.loginfo(str(N))
+
+        for i in range(N):
+            ox = msg.markers[i].pose.position.x
+            oy = msg.markers[i].pose.position.y
+            oid = msg.markers[i].id
+            update = [ox, oy, oid]
+
+            if observed_features == [None, None, None]: #if it is the first marker ever observed
+                observed_features = update       #the vector is the first marker
+            else:
+                observed_features.append(update) #the marker is added to the vector
+
+        self.markersisee = observed_features
+        rospy.loginfo('Observed features:')
+        rospy.loginfo(str(observed_features))
+
+
 def main():
     fake_world1=fake_world()
-    fake_world1.run_sim('wall', 'straightline')
+    ObsTranslator = ObsInterp()
+    fake_world1.run_sim('wall', 'straightline', ObsTranslator)
 
 if __name__ == '__main__':
     main()
