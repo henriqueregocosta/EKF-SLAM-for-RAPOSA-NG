@@ -1,0 +1,9 @@
+rosbag record /client_count /imu/data /joint_states /map /raposang/depth_cam/color/camera_info /raposang/depth_cam/color/image_raw /raposang/odometry_pose /tf /tf_static 
+
+
+roscore
+rosparam set use_sim_time true
+rosbag play --clock name.bag
+
+# optional
+/raposang/depth_cam/color/image_raw/compressed/parameter_descriptions /raposang/depth_cam/color/image_raw/compressed/parameter_updates

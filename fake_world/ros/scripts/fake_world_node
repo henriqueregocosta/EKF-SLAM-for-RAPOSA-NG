@@ -1,0 +1,276 @@
+#!/usr/bin/env python
+
+import fake_world_ros.fake_world_node
+import rospy
+import math
+import tf
+import numpy
+
+from geometry_msgs.msg import PoseStamped
+from nav_msgs.msg import Odometry
+from visualization_msgs.msg import MarkerArray
+from visualization_msgs.msg import Marker
+
+class fake_world(object):
+    # ----------------------------------
+    # Receives an array of odometry and
+    # landmark data and computes the 
+    # data to be received by the robot
+    # also receives the type of world and 
+    # trajectory
+    # ----------------------------------
+    def __init__(self):
+        # register node in ROS network
+        rospy.init_node('fake_world', anonymous=False)
+        # print message in terminal
+        rospy.loginfo('fake_world node is online')
+
+    def run_sim(self, world_type, movement_type, robot):
+        # world creation
+        if world_type=='wall':
+            self.landmark_list=self.finite_wall(1, 0, 10)
+        if movement_type=='straightline':
+            self.trajectory=self.straightline(3, 0, 90*math.pi/180, 0.01, 20)
+
+        j=0 # will be useful for something
+        rate = rospy.Rate(2) # 0.5 Hz
+
+        while not rospy.is_shutdown() and j<len(self.trajectory):
+            robot.send_tf()
+            robot.compute_movement(self.trajectory, j)
+            robot.compute_pose(self.trajectory, j)
+            robot.compute_observation(self.landmark_list)
+
+            # debug
+            # rospy.loginfo(str(j))
+
+            j+=1
+            rate.sleep()
+
+    def finite_wall(self, x, y, n):
+        # ---------------
+        # generates and infite wall of landmarks
+        # adds a new landmark with the same x-coordinate
+        # of the last one but one unit ahead in the
+        # y-axis
+        # ---------------
+        wall=[landmark(x,y,0)]
+        i=0
+        while i<n:
+            x=x
+            y=y+1;
+            identif=i+1;
+            new_landmark=landmark(x,y,identif)
+            wall.append(new_landmark)
+            i+=1
+        return wall
+
+    def straightline(self, x, y, theta, step, n):
+        # -------------
+        # generates a list of points that corresponds
+        # to a straight line trajectory with an assigned step
+        # and robot looking up (theta=90deg)
+        # -------------
+        identif=0
+        trajectory=[robot_pose()]
+        trajectory[0].x=x
+        trajectory[0].y=y
+        trajectory[0].theta=theta
+        for i in range(n):
+            point=robot_pose()
+            point.x=trajectory[i].x
+            point.y=trajectory[i].y+step
+            point.theta=trajectory[i].theta
+            trajectory.append(point)
+        return trajectory
+
+class robot(object):
+    # ----------------
+    # all robot related stuff are here
+    # ----------------
+
+    def __init__(self):
+        self.pose=robot_pose()
+        # setup publishers
+        self.posePublisher = rospy.Publisher('fake_pose', PoseStamped, queue_size=10)
+        self.obsPublisher = rospy.Publisher('fake_obs',MarkerArray,queue_size=10)
+        self.odomPublisher = rospy.Publisher('fake_odom',Odometry,queue_size=10)
+
+        # tf stuff
+        self.tf_br = tf.TransformBroadcaster()
+
+    def compute_pose(self, trajectory, i):
+        # ------------------------
+        # given the robot pose and the trajectory
+        # computes the movement vector
+        # ------------------------
+        self.pose.x=trajectory[i].x
+        self.pose.y=trajectory[i].y
+        self.pose.theta=trajectory[i].theta
+
+        rospy.loginfo('Pose')
+        rospy.loginfo(str([self.pose.x, self.pose.y, self.pose.theta, i]))
+
+        self.translate_pose()
+
+    def translate_pose(self):
+        # ------------------------
+        # given the robot pose and the trajectory
+        # computes the movement vector
+        # ------------------------
+        pose_msg=PoseStamped()
+        pose_msg.header.frame_id = "/base_link"
+        pose_msg.pose.position.x = self.pose.x
+        pose_msg.pose.position.y = self.pose.y
+        pose_msg.pose.orientation = tf.transformations.quaternion_from_euler(0, 0, self.pose.theta)
+
+        # publishes the pose
+        self.posePublisher.publish(pose_msg)
+
+    def compute_observation(self, landmark_list):
+        # ------------------------------
+        # given landmark world coordinates,
+        # computes the true pose of the landmark in
+        # the robot (camera) frame of reference
+        # also decides which landmarks are in the
+        # robots field of view
+        # ------------------------------
+        n=len(landmark_list)
+        observation=[]
+
+        for i in range(n):
+            # compute x and y of landmark
+            # compute x and y of robot
+            camera_measurement=landmark(0,0,0)
+            x_lm=landmark_list[i].x
+            y_lm=landmark_list[i].y
+            x_r=self.pose.x
+            y_r=self.pose.y
+            theta_r=self.pose.theta # just for now, robot is looking "up"
+
+            camera_measurement.x=(x_lm - x_r)*math.sin(theta_r) - (y_lm - y_r)*math.cos(theta_r)
+            camera_measurement.y=-(x_lm - x_r)*math.cos(theta_r) + (y_lm - y_r)*math.sin(theta_r)
+            camera_measurement.id=landmark_list[i].id
+
+            if self.is_in_line_of_sight(camera_measurement):
+                observation.append(camera_measurement)
+                # debug
+                rospy.loginfo('Observations')
+                rospy.loginfo(str([camera_measurement.x, camera_measurement.y, camera_measurement.id]))
+                #rospy.loginfo(str(camera_measurement.x))
+                #rospy.loginfo(str(camera_measurement.y))
+                #rospy.loginfo(str(camera_measurement.id))
+
+        self.translate_obs(observation)
+
+    def is_in_line_of_sight(self, camera_measurement):
+        # -----------------------
+        # check if camera measurement is in line of sight
+        # -----------------------
+
+        FOV=120*math.pi/180
+        x=camera_measurement.x
+        y=camera_measurement.y
+        theta=self.pose.theta # just for now, robot is looking up
+        dist=math.sqrt(x**2+y**2)
+        if x != 0:
+            dydx=abs(y/x)
+        else:
+            dydx=-1
+
+        fov_tangent=abs(math.tan(theta-FOV/2))# tangent of the field of view
+
+        if dydx >= fov_tangent and y>0 and dist<4:
+            return True
+        else:
+            return False
+    
+    def translate_obs(self, obs):
+        # ------------------------------
+        # translate obs vector into marker array
+        # message
+        # -----------------------
+
+        # creates empty MarkerArray message
+        n=len(obs)
+        markerArray=MarkerArray()
+        for i in range(n):
+            marker=Marker()
+            marker.header.frame_id = "/base_link"
+            marker.type = marker.SPHERE
+            marker.scale.x = 0.5
+            marker.scale.y = 0.5
+            marker.scale.z = 0.5
+            marker.color.a = 1.0
+            marker.color.r = 1.0+i
+            marker.color.g = 1.0
+            marker.color.b = 0.0
+            marker.pose.position.x = obs[i].x
+            marker.pose.position.y = obs[i].y
+            marker.id = obs[i].id
+            markerArray.markers.append(marker)
+
+        # publishes markerArray    
+        self.obsPublisher.publish(markerArray)
+
+    def compute_movement(self, trajectory, i):
+        # ------------------------
+        # given the robot pose and the trajectory
+        # computes the movement vector
+        # ------------------------
+        movement=robot_pose()
+        movement.x=trajectory[i+1].x-trajectory[i].x
+        movement.y=trajectory[i+1].y-trajectory[i].y
+
+        self.translate_odom(movement)
+
+    def translate_odom(self, movement):
+        # --------------------------------------
+        # translates movement info into odom message
+        # --------------------------------------
+        # creates empty pose message
+        odom_msg=Odometry()
+        odom_msg.pose.pose.position.x = movement.x
+        odom_msg.pose.pose.position.y = movement.y
+        # orientation
+        # missing: quaternion to euler angle transformation
+        # publish odom message
+
+        # publishes odometry message
+        self.odomPublisher.publish(odom_msg)
+
+    def send_tf(self):
+        self.tf_br.sendTransform((0, 0, 0),
+                                    tf.transformations.quaternion_from_euler(0, 0, 0),
+                                    rospy.Time.now(),
+                                    '/base_link',
+                                    "map")
+
+
+class landmark(object):
+    # -------------
+    # creates a list of landmarks and their world 
+    # todo: translate into code the observation model
+    # this needs to be integrated with the algorihm node
+    # -------------
+    def __init__(self, x, y, identif):
+        self.x=x
+        self.y=y
+        self.id=identif
+
+class robot_pose(object):
+    # ----------------
+    # represents the current pose of the robot
+    # ----------------
+    def __init__(self):
+        self.x=0
+        self.y=0
+        self.theta=0 # for now, robot is looking up
+
+def main():
+    fake_world1=fake_world()
+    robot1=robot()
+    fake_world1.run_sim('wall', 'straightline', robot1)
+
+if __name__ == '__main__':
+    main()

@@ -1,0 +1,9 @@
+rosrun aruco optimalmarkers a b c d
+
+a - number of markers
+
+b - name of the markers
+
+c - size (in pixels?) of marker
+
+d - minimum entropy (what is this?)
