@@ -5,6 +5,7 @@ import rospy
 import math
 import tf
 import numpy
+import plotresults
 
 from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Odometry
@@ -25,17 +26,14 @@ class fake_world(object):
         # print message in terminal
         rospy.loginfo('fake_world node is online')
 
-    def run_sim(self, world_type, movement_type, robot):
+    def run_sim(self, world_type, robot):
         # world creation
-        if world_type=='wall':
-            self.landmark_list=self.finite_wall(1, 0, 10)
-        if movement_type=='straightline':
-            self.trajectory=self.straightline(3, 0, 90*math.pi/180, 0.01, 20)
+        self.landmark_list, self.trajectory = createworld(world_type)
 
         j=0 # will be useful for something
-        rate = rospy.Rate(2) # 0.5 Hz
+        rate = rospy.Rate(200) # T=0.01s
 
-        while not rospy.is_shutdown() and j<len(self.trajectory):
+        while not rospy.is_shutdown() and j<len(self.trajectory)-1:
             robot.send_tf()
             robot.compute_movement(self.trajectory, j)
             robot.compute_pose(self.trajectory, j)
@@ -47,42 +45,7 @@ class fake_world(object):
             j+=1
             rate.sleep()
 
-    def finite_wall(self, x, y, n):
-        # ---------------
-        # generates and infite wall of landmarks
-        # adds a new landmark with the same x-coordinate
-        # of the last one but one unit ahead in the
-        # y-axis
-        # ---------------
-        wall=[landmark(x,y,0)]
-        i=0
-        while i<n:
-            x=x
-            y=y+1;
-            identif=i+1;
-            new_landmark=landmark(x,y,identif)
-            wall.append(new_landmark)
-            i+=1
-        return wall
-
-    def straightline(self, x, y, theta, step, n):
-        # -------------
-        # generates a list of points that corresponds
-        # to a straight line trajectory with an assigned step
-        # and robot looking up (theta=90deg)
-        # -------------
-        identif=0
-        trajectory=[robot_pose()]
-        trajectory[0].x=x
-        trajectory[0].y=y
-        trajectory[0].theta=theta
-        for i in range(n):
-            point=robot_pose()
-            point.x=trajectory[i].x
-            point.y=trajectory[i].y+step
-            point.theta=trajectory[i].theta
-            trajectory.append(point)
-        return trajectory
+        plotresults.plot_world(self.landmark_list, self.trajectory, robot.observation, world_type)
 
 class robot(object):
     # ----------------
@@ -108,8 +71,8 @@ class robot(object):
         self.pose.y=trajectory[i].y
         self.pose.theta=trajectory[i].theta
 
-        rospy.loginfo('Pose')
-        rospy.loginfo(str([self.pose.x, self.pose.y, self.pose.theta, i]))
+        # rospy.loginfo('Pose')
+        # rospy.loginfo(str([self.pose.x, self.pose.y, self.pose.theta, i]))
 
         self.translate_pose()
 
@@ -136,7 +99,7 @@ class robot(object):
         # robots field of view
         # ------------------------------
         n=len(landmark_list)
-        observation=[]
+        self.observation=[]
 
         for i in range(n):
             # compute x and y of landmark
@@ -153,15 +116,15 @@ class robot(object):
             camera_measurement.id=landmark_list[i].id
 
             if self.is_in_line_of_sight(camera_measurement):
-                observation.append(camera_measurement)
+                self.observation.append(camera_measurement)
                 # debug
-                rospy.loginfo('Observations')
-                rospy.loginfo(str([camera_measurement.x, camera_measurement.y, camera_measurement.id]))
+                # rospy.loginfo('Observations')
+                # rospy.loginfo(str([camera_measurement.x, camera_measurement.y, camera_measurement.id]))
                 #rospy.loginfo(str(camera_measurement.x))
                 #rospy.loginfo(str(camera_measurement.y))
                 #rospy.loginfo(str(camera_measurement.id))
 
-        self.translate_obs(observation)
+        self.translate_obs(self.observation)
 
     def is_in_line_of_sight(self, camera_measurement):
         # -----------------------
@@ -249,7 +212,6 @@ class robot(object):
                                     '/base_link',
                                     "map")
 
-
 class landmark(object):
     # -------------
     # creates a list of landmarks and their world 
@@ -270,10 +232,301 @@ class robot_pose(object):
         self.y=0
         self.theta=0 # for now, robot is looking up
 
+def createworld(worldtype):
+    if worldtype=='world1':
+        landmark_list=finite_wall(1, 0, 10)
+        trajectory=straightline(3, 0, 90*math.pi/180, 0.1, 100,1)
+
+    if worldtype=='world2':
+        landmark_list=world2_lm()
+        trajectory=world2_tr()
+
+    if worldtype=='world3':
+        landmark_list=world3_lm()
+        trajectory=world3_tr()
+
+    return landmark_list, trajectory
+
+def finite_wall(x, y, n):
+    # ---------------
+    # generates and infite wall of landmarks
+    # adds a new landmark with the same x-coordinate
+    # of the last one but one unit ahead in the
+    # y-axis
+    # ---------------
+    wall=[landmark(x,y,0)]
+    i=0
+    while i<n:
+        x=x
+        y=y+1;
+        identif=i+1;
+        new_landmark=landmark(x,y,identif)
+        wall.append(new_landmark)
+        i+=1
+    return wall
+
+def straightline(x, y, theta, step, n, direction):
+    # -------------
+    # generates a list of points that corresponds
+    # to a straight line trajectory with an assigned step
+    # and robot looking up (theta=90deg)
+    # -------------
+    # if direction is 1 direction is y, 0 otherwise
+    identif=0
+    trajectory=[robot_pose()]
+    trajectory[0].x=x
+    trajectory[0].y=y
+    trajectory[0].theta=theta
+    for i in range(n):
+        point=robot_pose()
+        point.x=trajectory[i].x+direction*step
+        point.y=trajectory[i].y+direction*step
+        point.theta=trajectory[i].theta
+        trajectory.append(point)
+    return trajectory
+
+def world2_lm():
+    landmarks=[]
+    # 0
+    landmark1=landmark(-4,0,0)
+    landmarks.append(landmark1)
+    # 1
+    landmark1=landmark(-2,2,1)
+    landmarks.append(landmark1)
+    # 2
+    landmark1=landmark(0,3,2)
+    landmarks.append(landmark1)
+    # 3
+    landmark1=landmark(2,2,3)
+    landmarks.append(landmark1)
+    # 4
+    landmark1=landmark(4,0,4)
+    landmarks.append(landmark1)
+    # 5
+    landmark1=landmark(2,-2,5)
+    landmarks.append(landmark1)
+    # 6
+    landmark1=landmark(0,-3,6)
+    landmarks.append(landmark1)
+    # 7
+    landmark1=landmark(-2,-2,7)
+    landmarks.append(landmark1)
+    return landmarks
+
+def world2_tr():
+    # -------------
+    # generates a list of points that corresponds
+    # to a straight line trajectory with an assigned step
+    # and robot looking up (theta=90deg)
+    # -------------
+    trajectory=[robot_pose()]
+    # from (-1,-1) to (-1,1)
+    x=-1
+    y=-1
+    theta=90*math.pi/180
+    identif=0
+    step=0.1
+    walkin_x=0
+    walkin_y=1
+    n=19
+    trajectory[identif].x=x
+    trajectory[identif].y=y
+    trajectory[identif].theta=theta
+    for i in range(identif, identif + n):
+        point=robot_pose()
+        point.x=trajectory[i].x+walkin_x*step
+        point.y=trajectory[i].y+walkin_y*step
+        point.theta=trajectory[i].theta
+        trajectory.append(point)
+
+    # from (-1,1) to (1,1)
+    x=-1
+    y=1
+    theta=0
+    identif=20
+    step=0.1
+    walkin_x=1
+    walkin_y=0
+    n=19
+    point=robot_pose()
+    point.x=x
+    point.y=y
+    point.theta=theta
+    trajectory.append(point)
+    for i in range(identif, identif + n):
+        point=robot_pose()
+        point.x=trajectory[i].x+walkin_x*step
+        point.y=trajectory[i].y+walkin_y*step
+        point.theta=trajectory[i].theta
+        trajectory.append(point)
+
+    # from (1,1) to (1,-1)
+    x=1
+    y=1
+    theta=270*math.pi/180
+    identif=40
+    step=0.1
+    walkin_x=0
+    walkin_y=-1
+    n=19
+    point=robot_pose()
+    point.x=x
+    point.y=y
+    point.theta=theta
+    trajectory.append(point)
+    for i in range(identif, identif + n):
+        point=robot_pose()
+        point.x=trajectory[i].x+walkin_x*step
+        point.y=trajectory[i].y+walkin_y*step
+        point.theta=trajectory[i].theta
+        trajectory.append(point)
+
+    # from (1,-1) to (-1,-1)
+    x=1
+    y=-1
+    theta=180*math.pi/180
+    identif=60
+    step=0.1
+    walkin_x=-1
+    walkin_y=0
+    n=19
+    point=robot_pose()
+    point.x=x
+    point.y=y
+    point.theta=theta
+    trajectory.append(point)
+    for i in range(identif, identif + n):
+        point=robot_pose()
+        point.x=trajectory[i].x+walkin_x*step
+        point.y=trajectory[i].y+walkin_y*step
+        point.theta=trajectory[i].theta
+        trajectory.append(point)
+
+    return trajectory
+
+def world3_lm():
+    landmarks=[]
+    # 0
+    landmark1=landmark(-4,0,0)
+    landmarks.append(landmark1)
+    # 1
+    landmark1=landmark(-2,2,1)
+    landmarks.append(landmark1)
+    # 2
+    landmark1=landmark(0,3,2)
+    landmarks.append(landmark1)
+    # 3
+    landmark1=landmark(2,2,3)
+    landmarks.append(landmark1)
+    # 4
+    landmark1=landmark(4,0,4)
+    landmarks.append(landmark1)
+    # 5
+    landmark1=landmark(2,-2,5)
+    landmarks.append(landmark1)
+    # 6
+    landmark1=landmark(0,-3,6)
+    landmarks.append(landmark1)
+    # 7
+    landmark1=landmark(-2,-2,7)
+    landmarks.append(landmark1)
+    return landmarks
+
+def world3_tr():
+    # -------------
+    # generates a list of points that corresponds
+    # to a straight line trajectory with an assigned step
+    # and robot looking up (theta=90deg)
+    # -------------
+    trajectory=[robot_pose()]
+    # from (-3,-3) to (-1,1)
+    x=-3
+    y=-3
+    theta=90*math.pi/180
+    identif=0
+    step=0.1
+    walkin_x=0
+    walkin_y=1
+    n=39
+    trajectory[identif].x=x
+    trajectory[identif].y=y
+    trajectory[identif].theta=theta
+    for i in range(identif, identif + n):
+        point=robot_pose()
+        point.x=trajectory[i].x+walkin_x*step
+        point.y=trajectory[i].y+walkin_y*step
+        point.theta=trajectory[i].theta
+        trajectory.append(point)
+
+    # from (-3,1) to (1,1)
+    x=-3
+    y=1
+    theta=0
+    identif=40
+    step=0.1
+    walkin_x=1
+    walkin_y=0
+    n=39
+    point=robot_pose()
+    point.x=x
+    point.y=y
+    point.theta=theta
+    trajectory.append(point)
+    for i in range(identif, identif + n):
+        point=robot_pose()
+        point.x=trajectory[i].x+walkin_x*step
+        point.y=trajectory[i].y+walkin_y*step
+        point.theta=trajectory[i].theta
+        trajectory.append(point)
+
+    # from (1,1) to (1,-1)
+    x=1
+    y=1
+    theta=270*math.pi/180
+    identif=80
+    step=0.1
+    walkin_x=0
+    walkin_y=-1
+    n=19
+    point=robot_pose()
+    point.x=x
+    point.y=y
+    point.theta=theta
+    trajectory.append(point)
+    for i in range(identif, identif + n):
+        point=robot_pose()
+        point.x=trajectory[i].x+walkin_x*step
+        point.y=trajectory[i].y+walkin_y*step
+        point.theta=trajectory[i].theta
+        trajectory.append(point)
+
+    # from (1,-1) to (-1,-1)
+    x=1
+    y=-1
+    theta=180*math.pi/180
+    identif=100
+    step=0.1
+    walkin_x=-1
+    walkin_y=0
+    n=19
+    point=robot_pose()
+    point.x=x
+    point.y=y
+    point.theta=theta
+    trajectory.append(point)
+    for i in range(identif, identif + n):
+        point=robot_pose()
+        point.x=trajectory[i].x+walkin_x*step
+        point.y=trajectory[i].y+walkin_y*step
+        point.theta=trajectory[i].theta
+        trajectory.append(point)
+
+    return trajectory
+
 def main():
     fake_world1=fake_world()
     robot1=robot()
-    fake_world1.run_sim('wall', 'straightline', robot1)
+    fake_world1.run_sim('world3', robot1)
 
 if __name__ == '__main__':
     main()
