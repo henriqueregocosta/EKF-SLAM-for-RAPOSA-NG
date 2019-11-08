@@ -221,6 +221,7 @@ class robot(object):
         movement=robot_pose()
         movement.x=trajectory[i+1].x-trajectory[i].x
         movement.y=trajectory[i+1].y-trajectory[i].y
+        movement.theta=trajectory[i+1].theta-trajectory[i].theta
 
         self.translate_odom(movement)
 
@@ -232,9 +233,11 @@ class robot(object):
         odom_msg=Odometry()
         odom_msg.pose.pose.position.x = movement.x
         odom_msg.pose.pose.position.y = movement.y
-        # orientation
-        # missing: quaternion to euler angle transformation
-        # publish odom message
+        quaternion = tf.transformations.quaternion_from_euler(0, 0, movement.theta)
+        odom_msg.pose.pose.orientation.x = quaternion[0]
+        odom_msg.pose.pose.orientation.y = quaternion[1]
+        odom_msg.pose.pose.orientation.z = quaternion[2]
+        odom_msg.pose.pose.orientation.w = quaternion[3]
 
         # publishes odometry message
         self.odomPublisher.publish(odom_msg)
