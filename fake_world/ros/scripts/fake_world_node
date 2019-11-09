@@ -35,7 +35,7 @@ class fake_world(object):
         j=0 # will be useful for something
         rate = rospy.Rate(2) # 0.5 Hz
 
-        while not rospy.is_shutdown() and j<len(self.trajectory):
+        while not rospy.is_shutdown() and j<len(self.trajectory)-1:
             robot.send_tf()
             robot.compute_movement(self.trajectory, j)
             robot.compute_pose(self.trajectory, j)
