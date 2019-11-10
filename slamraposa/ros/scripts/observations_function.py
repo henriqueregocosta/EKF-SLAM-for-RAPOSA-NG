@@ -9,10 +9,9 @@ class ObsInterp(object):
         Class constructor: will get executed at the moment
         of object creation
         '''
-        rospy.loginfo('Observations Interperter Started')
+        rospy.loginfo('Observations Interpreter Started')
         # subscribe to RaposaNG ARUCO topic
         rospy.Subscriber("fake_obs", MarkerArray, self.ARUCOCallback)
-        print('Subscribe')
         # define member variable and initialize with a big value
         # it will store the distance from the robot to the walls
         self.markersisee = []
@@ -27,7 +26,6 @@ class ObsInterp(object):
 
         self.state = 1
         N = len(msg.markers)
-        rospy.loginfo(str(N))
 
         for i in range(N):
             ox = msg.markers[i].pose.position.x

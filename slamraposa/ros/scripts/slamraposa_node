@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import slamraposa_ros.slamraposa_node
-
 import numpy as np
 import math
 import rospy
@@ -21,8 +20,6 @@ def main():
         Q = np.identity(3)
         R = np.identity(3)
         operation.EKF(odometry, observations, Q, R)
-        rospy.loginfo('while')
-        print('print')
 
 if __name__ == '__main__':
     main()

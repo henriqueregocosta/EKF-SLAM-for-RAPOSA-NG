@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 import rospy
 from nav_msgs.msg import Odometry
 
@@ -11,7 +9,7 @@ class OdoInterp(object):
         of object creation
         '''
 
-        rospy.loginfo('Odometry Interperter Started')
+        rospy.loginfo('Odometry Interpreter Started')
         # subscribe to RaposaNG ARUCO topic
         rospy.Subscriber("fake_odom", Odometry, self.ARUCOCallback)
         # define member variable and initialize with a big value
@@ -25,11 +23,11 @@ class OdoInterp(object):
         topic: /fake_odom
         '''
         
-        posx = msg.odometry.pose.pose.position.x ######msg.odometry?????????
-        posy = msg.odometry.pose.pose.position.y
-        qx = msg.odometry.pose.pose.orientation.x
-        qy = msg.odometry.pose.pose.orientation.y
-        qz = msg.odometry.pose.pose.orientation.z
-        qw = msg.odometry.pose.pose.orientation.w
+        posx = msg.pose.pose.position.x
+        posy = msg.pose.pose.position.y
+        qx = msg.pose.pose.orientation.x
+        qy = msg.pose.pose.orientation.y
+        qz = msg.pose.pose.orientation.z
+        qw = msg.pose.pose.orientation.w
             
         self.position_and_quaternions = [posx, posy, qx,qy,qz,qw]
