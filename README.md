@@ -12,6 +12,8 @@ Odometry interpreter: Luís
 
 *Fake data:* Henrique
 
+Hoe to define the Q matrix with velocity: Inês
+
 How to use this repo
 ===
 
