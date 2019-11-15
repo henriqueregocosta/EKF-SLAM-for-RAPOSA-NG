@@ -6,7 +6,7 @@ import rospy
 import observations_function as obs
 import odometry_function as odo
 import EKF_SLAM
-import plotresults
+import showslam
 
 
 def main():
@@ -28,7 +28,7 @@ def main():
         x.append(operation.mean_pred[0][0])
         y.append(operation.mean_pred[0][1])
 
-    plotresults.plot_SLAM(x,y,operation.mean_pred)
+    showslam.plot_SLAM(x,y,operation.mean_pred)
 
 if __name__ == '__main__':
     main()
