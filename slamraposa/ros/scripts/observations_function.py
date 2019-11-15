@@ -24,7 +24,6 @@ class ObsInterp(object):
         topic: /fake_obs
         '''
 
-        self.state = 1
         N = len(msg.markers)
 
         for i in range(N):
@@ -34,3 +33,5 @@ class ObsInterp(object):
             update = [ox, oy, oid]
 
             self.markersisee.append(update) # the marker is added to the vector
+
+        self.state = 1

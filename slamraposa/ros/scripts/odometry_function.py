@@ -31,3 +31,20 @@ class OdoInterp(object):
         qw = msg.pose.pose.orientation.w
             
         self.position_and_quaternions = [posx, posy, qx,qy,qz,qw]
+
+        self.state = 1
+
+
+    def quaternions(self, qx, qy, qz, qw):
+        return math.asin(2*(qx*qz - qw*qy)) 
+
+
+    def odometry_model(self, theta, odometry):
+        x_hat, y_hat, qx, qy, qz, qw = self.position_and_quaternions
+        
+        delta_rot1 = math.atan(y_hat/x_hat) - theta
+        delta_trans = math.sqrt(x_hat*x_hat + y_hat*y_hat)
+        
+        theta_hat = self.quaternions(qx, qy, qz, qw)
+        delta_rot2 = theta_hat - theta - delta_rot1
+        return delta_rot1, delta_trans, delta_rot2
