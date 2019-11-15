@@ -31,12 +31,12 @@ class fake_world(object):
         self.landmark_list, self.trajectory = createworld(world_type)
 
         j=0 # will be useful for something
-        rate = rospy.Rate(200) # T=0.01s
+        rate = rospy.Rate(1) # T=0.01s
 
         while not rospy.is_shutdown() and j<len(self.trajectory)-1:
             robot.send_tf()
-            robot.compute_movement(self.trajectory, j)
             robot.compute_pose(self.trajectory, j)
+            robot.compute_movement(self.trajectory, j)
             robot.compute_observation(self.landmark_list)
 
             # debug
@@ -85,7 +85,11 @@ class robot(object):
         pose_msg.header.frame_id = "/base_link"
         pose_msg.pose.position.x = self.pose.x
         pose_msg.pose.position.y = self.pose.y
-        pose_msg.pose.orientation = tf.transformations.quaternion_from_euler(0, 0, self.pose.theta)
+        quat = tf.transformations.quaternion_from_euler(0, 0, self.pose.theta)
+        pose_msg.pose.orientation.x = quat[0]
+        pose_msg.pose.orientation.y = quat[1] 
+        pose_msg.pose.orientation.z = quat[2] 
+        pose_msg.pose.orientation.w = quat[3] 
 
         # publishes the pose
         self.posePublisher.publish(pose_msg)
@@ -109,7 +113,7 @@ class robot(object):
             y_lm=landmark_list[i].y
             x_r=self.pose.x
             y_r=self.pose.y
-            theta_r=self.pose.theta # just for now, robot is looking "up"
+            theta_r=self.pose.theta
 
             camera_measurement.x=(x_lm - x_r)*math.sin(theta_r) - (y_lm - y_r)*math.cos(theta_r)
             camera_measurement.y=-(x_lm - x_r)*math.cos(theta_r) + (y_lm - y_r)*math.sin(theta_r)
@@ -245,7 +249,7 @@ def createworld(worldtype):
         landmark_list=world3_lm()
         trajectory=world3_tr()
     if worldtype=='world4':
-        trajectory=straightline(0,0,90*math.pi/180,0.1,100,1)
+        trajectory=straightline(0,0,90*math.pi/180,0.5,20,1)
         landmark_list=finite_wall(1, 0, 10)
 
     return landmark_list, trajectory
@@ -286,6 +290,8 @@ def straightline(x, y, theta, step, n, direction):
         point.y=trajectory[i].y+direction*step
         point.theta=trajectory[i].theta
         trajectory.append(point)
+
+    print(trajectory[0].y)
     return trajectory
 
 def world2_lm():
