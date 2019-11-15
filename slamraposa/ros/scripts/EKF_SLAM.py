@@ -20,7 +20,8 @@ class SLAM(object):
         a = delta_trans*math.cos(theta + delta_rot1)
         b = delta_trans*math.sin(theta + delta_rot1)
         c = delta_rot1 + delta_rot2
-        self.sum_to_mean_pred(np.dot(Fx.T,np.array([a, b, c])))
+
+        self.sum_to_mean_pred(np.dot(Fx.T,np.array([[a], [b], [c]])))
         
         g = np.matrix([[0, 0, -b],[0, 0, a],[0, 0, 0]])
         G = np.identity(3*N+3) + np.dot(np.dot(Fx.T,g),Fx)
@@ -108,5 +109,6 @@ class SLAM(object):
                     N += 1
                     j = N
                 self.update_seen_landmarks(j, N, z, Q, R)
+
             observations.state = 0
-            print(self.mean_pred)
+
