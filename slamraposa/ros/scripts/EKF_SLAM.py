@@ -6,7 +6,7 @@ import thread
 class SLAM(object):
     def __init__(self, queue_name):
         self.mean_pred = [[0, 0, 0]]
-        self.cov_pred = np.identity(3)
+        self.cov_pred = np.zeros((3,3))
         self.q = queue_name
 
 
@@ -87,7 +87,7 @@ class SLAM(object):
         return z_pred
 
 
-    def compute_selection_matrix(self, j, N):    
+    def selection_matrix(self, j, N):    
         if j== N:
             if N == 1:
                 Fx_j = np.identity(6)
@@ -102,20 +102,27 @@ class SLAM(object):
         return Fx_j
 
 
-    def update_seen_landmarks(self, j, z, Q):
-        N = len(self.mean_pred) - 1
+    def jacobian(self, j):
         x_lm = self.mean_pred[j][0]
         y_lm = self.mean_pred[j][1]
         x_r = self.mean_pred[0][0]
         y_r = self.mean_pred[0][1]
         theta_r = self.mean_pred[0][2]
-        z_pred = self.predict_landmark_pos(j)
-        
-        Fx_j = self.compute_selection_matrix(j, N)
 
         h = np.matrix([[-math.sin(theta_r), math.cos(theta_r), (x_lm-x_r)*math.cos(theta_r)+(y_lm-y_r)*math.sin(theta_r), math.sin(theta_r), -math.cos(theta_r), 0],
             [math.cos(theta_r), -math.sin(theta_r), (x_lm-x_r)*math.sin(theta_r)+(y_lm-y_r)*math.cos(theta_r), -math.cos(theta_r), math.sin(theta_r), 0],
             [0, 0, 0, 0, 0, 1]])
+        return h
+
+
+    def update_seen_landmarks(self, j, z, Q):
+        N = len(self.mean_pred) - 1
+        
+        z_pred = self.predict_landmark_pos(j)
+        
+        Fx_j = self.selection_matrix(j, N)
+
+        h = self.jacobian(j)
         H = np.dot(h, Fx_j)
         
         K = self.cov_pred.dot(H.T).dot(np.linalg.inv(H.dot(self.cov_pred).dot(H.T) + Q))
