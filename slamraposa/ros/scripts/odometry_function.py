@@ -1,4 +1,6 @@
 import rospy
+import math
+
 from nav_msgs.msg import Odometry
 
 class OdoInterp(object):
@@ -42,9 +44,9 @@ class OdoInterp(object):
     def odometry_model(self, theta, odometry):
         x_hat, y_hat, qx, qy, qz, qw = self.position_and_quaternions
         
-        delta_rot1 = math.atan(y_hat/x_hat) - theta
+        delta_rot1 = math.atan2(y_hat,x_hat) - theta
         delta_trans = math.sqrt(x_hat*x_hat + y_hat*y_hat)
-        
+          
         theta_hat = self.quaternions(qx, qy, qz, qw)
         delta_rot2 = theta_hat - theta - delta_rot1
         return delta_rot1, delta_trans, delta_rot2

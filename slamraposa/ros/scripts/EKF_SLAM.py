@@ -14,7 +14,7 @@ class SLAM(object):
 
 
     def update_robot_pos(self, N, theta, odometry, R):
-        Fx = np.array([np.identity(3), np.zeros((3,3*N))])
+        Fx = np.bmat([np.identity(3), np.zeros((3,3*N))])
 
         delta_rot1, delta_trans, delta_rot2 = odometry.odometry_model(theta, odometry)
         a = delta_trans*math.cos(theta + delta_rot1)
