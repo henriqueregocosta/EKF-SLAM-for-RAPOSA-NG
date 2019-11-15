@@ -10,7 +10,7 @@ class SLAM(object):
     def sum_to_mean_pred(self, array):
         for i in range(len(self.mean_pred)):
             for j in range(3):
-                self.mean_pred[i][j] +=  float(array[3*i+j])
+                self.mean_pred[i][j] += float(array[3*i+j]
 
 
     def update_robot_pos(self, N, theta, odometry, R):
