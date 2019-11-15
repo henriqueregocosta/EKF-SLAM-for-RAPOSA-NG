@@ -5,7 +5,7 @@ from nav_msgs.msg import Odometry
 
 class OdoInterp(object):
 
-    def __init__(self):
+    def __init__(self, queue_name):
         '''
         Class constructor: will get executed at the moment
         of object creation
@@ -17,7 +17,7 @@ class OdoInterp(object):
         # define member variable and initialize with a big value
         # it will store the distance from the robot to the walls
         self.position_and_quaternions = []
-        self.state = 0
+        self.q = queue_name
     
     def ARUCOCallback(self, msg):
         '''
@@ -34,14 +34,14 @@ class OdoInterp(object):
             
         self.position_and_quaternions = [posx, posy, qx,qy,qz,qw]
 
-        self.state = 1
+        self.q.put(1)
 
 
     def quaternions(self, qx, qy, qz, qw):
         return math.asin(2*(qx*qz - qw*qy)) 
 
 
-    def odometry_model(self, theta, odometry):
+    def odometry_model(self, theta):
         x_hat, y_hat, qx, qy, qz, qw = self.position_and_quaternions
         
         delta_rot1 = math.atan2(y_hat,x_hat) - theta

@@ -1,10 +1,12 @@
-import numpy as np
 import math
+import multiprocessing
+import numpy as np
 
 class SLAM(object):
-    def __init__(self):
+    def __init__(self, queue_name):
         self.mean_pred = [[0, 0, 0]]
         self.cov_pred = np.identity(3)
+        self.q = queue_name
 
 
     def sum_to_mean_pred(self, array):
@@ -16,7 +18,7 @@ class SLAM(object):
     def update_robot_pos(self, N, theta, odometry, R):
         Fx = np.bmat([np.identity(3), np.zeros((3,3*N))])
 
-        delta_rot1, delta_trans, delta_rot2 = odometry.odometry_model(theta, odometry)
+        delta_rot1, delta_trans, delta_rot2 = odometry.odometry_model(theta)
         a = delta_trans*math.cos(theta + delta_rot1)
         b = delta_trans*math.sin(theta + delta_rot1)
         c = delta_rot1 + delta_rot2
@@ -26,6 +28,15 @@ class SLAM(object):
         g = np.matrix([[0, 0, -b],[0, 0, a],[0, 0, 0]])
         G = np.identity(3*N+3) + np.dot(np.dot(Fx.T,g),Fx)
         self.cov_pred = G.dot(self.cov_pred).dot(G.T) + Fx.T.dot(R).dot(Fx)
+
+
+    def search_for_landmark(self, N, z):
+        j = 0
+        if N>0: # check if the observation corresponds to a already seen landmark
+            for i in range(N):
+                if(z[2]==self.mean_pred[i+1][2]):
+                    j = i+1
+        return j
 
 
     def add_unseen_landmark(self, theta, z):
@@ -93,20 +104,15 @@ class SLAM(object):
         N = len(self.mean_pred) - 1 # nr of landamrks already seen
         theta = self.mean_pred[0][2]
         
-        if odometry.state == 1:
+        if self.q.get() > 0:
             print('odometry')
             self.update_robot_pos(N, theta, odometry, R)
-            odometry.state = 0
-        if observations.state == 1:
+        else:
+            print('observations')
             for z in observations.markersisee: # z = [x y s].T
-                j = 0
-                if N>0: # check if the observation corresponds to a already seen landmark
-                    for i in range(N):
-                        if(z[2]==self.mean_pred[i+1][2]):
-                            j = i+1
+                j = self.search_for_landmark(N,z)
                 if j == 0:
                     self.add_unseen_landmark(theta, z)
                     N += 1
                     j = N
                 self.update_seen_landmarks(j, N, z, Q, R)
-            observations.state = 0

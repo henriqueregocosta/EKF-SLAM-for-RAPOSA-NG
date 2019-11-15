@@ -4,7 +4,7 @@ from visualization_msgs.msg import Marker
 
 class ObsInterp(object):
 
-    def __init__(self):
+    def __init__(self, queue_name):
         '''
         Class constructor: will get executed at the moment
         of object creation
@@ -15,7 +15,7 @@ class ObsInterp(object):
         # define member variable and initialize with a big value
         # it will store the distance from the robot to the walls
         self.markersisee = []
-        self.state = 0 #
+        self.q = queue_name
 
     
     def ARUCOCallback(self, msg):
@@ -34,4 +34,4 @@ class ObsInterp(object):
 
             self.markersisee.append(update) # the marker is added to the vector
 
-        self.state = 1
+        self.q.put(-1)
