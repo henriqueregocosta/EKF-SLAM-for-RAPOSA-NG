@@ -244,6 +244,9 @@ def createworld(worldtype):
     if worldtype=='world3':
         landmark_list=world3_lm()
         trajectory=world3_tr()
+    if worldtype=='world4':
+        trajectory=straightline(0,0,90*math.pi/180,0.1,100,1)
+        landmark_list=finite_wall(1, 0, 10)
 
     return landmark_list, trajectory
 
@@ -279,7 +282,7 @@ def straightline(x, y, theta, step, n, direction):
     trajectory[0].theta=theta
     for i in range(n):
         point=robot_pose()
-        point.x=trajectory[i].x+direction*step
+        point.x=trajectory[i].x
         point.y=trajectory[i].y+direction*step
         point.theta=trajectory[i].theta
         trajectory.append(point)
@@ -526,7 +529,7 @@ def world3_tr():
 def main():
     fake_world1=fake_world()
     robot1=robot()
-    fake_world1.run_sim('world3', robot1)
+    fake_world1.run_sim('world4', robot1)
 
 if __name__ == '__main__':
     main()

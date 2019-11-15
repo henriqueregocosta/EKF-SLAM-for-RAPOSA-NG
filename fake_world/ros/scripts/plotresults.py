@@ -33,4 +33,7 @@ def plot_world(landmark_list, trajectory, observations, world):
         plt.ylim((-5,5))
         plt.xlim((-5,5))
 
+    plt.ylim(-1,9)
+    plt.xlim(-1,9)
+
     plt.show()
