@@ -7,21 +7,6 @@ class SLAM(object):
         self.cov_pred = np.zeros((3,3))
 
 
-    def quaternions(self, qx, qy, qz, qw):
-        return math.asin(2*(qw*qy - qz*qx)) 
-
-
-    def odometry_model(self, theta, odometry):
-        x_hat, y_hat, qx, qy, qz, qw = odometry.position_and_quaternions
-        
-        delta_rot1 = math.atan(y_hat/x_hat) - theta
-        delta_trans = math.sqrt(x_hat*x_hat + y_hat*y_hat)
-        
-        theta_hat = self.quaternions(qx, qy, qz, qw)
-        delta_rot2 = theta_hat - theta - delta_rot1
-        return delta_rot1, delta_trans, delta_rot2
-
-    
     def sum_to_mean_pred(self, array):
         for i in range(len(self.mean_pred)):
             for j in range(3):
@@ -31,7 +16,7 @@ class SLAM(object):
     def update_robot_pos(self, N, theta, odometry, R):
         Fx = np.array([np.identity(3), np.zeros((3,3*N))])
 
-        delta_rot1, delta_trans, delta_rot2 = self.odometry_model(theta, odometry)
+        delta_rot1, delta_trans, delta_rot2 = odometry.odometry_model(theta, odometry)
         a = delta_trans*math.cos(theta + delta_rot1)
         b = delta_trans*math.sin(theta + delta_rot1)
         c = delta_rot1 + delta_rot2
