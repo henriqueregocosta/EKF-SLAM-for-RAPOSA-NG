@@ -1,6 +1,7 @@
 import math
 import multiprocessing
 import numpy as np
+import thread
 
 class SLAM(object):
     def __init__(self, queue_name):
@@ -9,16 +10,34 @@ class SLAM(object):
         self.q = queue_name
 
 
+    def quaternions(self, qx, qy, qz, qw):
+        return math.asin(2*(qx*qz - qw*qy)) 
+
+
+    def odometry_model(self, theta, odometry):
+        x_hat, y_hat, qx, qy, qz, qw = odometry
+        
+        delta_rot1 = math.atan2(y_hat,x_hat) - theta
+        delta_trans = math.sqrt(x_hat*x_hat + y_hat*y_hat)
+        
+        theta_hat = self.quaternions(qx, qy, qz, qw)
+        delta_rot2 = theta_hat - theta - delta_rot1
+        return delta_rot1, delta_trans, delta_rot2
+
+
     def sum_to_mean_pred(self, array):
         for i in range(len(self.mean_pred)):
             for j in range(3):
                 self.mean_pred[i][j] +=  float(array[3*i+j])
 
 
-    def update_robot_pos(self, N, theta, odometry, R):
+    def update_robot_pos(self, event):
+        N = len(self.mean_pred) - 1
+        theta = self.mean_pred[0][2]
+
         Fx = np.bmat([np.identity(3), np.zeros((3,3*N))])
 
-        delta_rot1, delta_trans, delta_rot2 = odometry.odometry_model(theta)
+        delta_rot1, delta_trans, delta_rot2 = self.odometry_model(theta, event[1])
         a = delta_trans*math.cos(theta + delta_rot1)
         b = delta_trans*math.sin(theta + delta_rot1)
         c = delta_rot1 + delta_rot2
@@ -27,10 +46,11 @@ class SLAM(object):
         
         g = np.matrix([[0, 0, -b],[0, 0, a],[0, 0, 0]])
         G = np.identity(3*N+3) + np.dot(np.dot(Fx.T,g),Fx)
-        self.cov_pred = G.dot(self.cov_pred).dot(G.T) + Fx.T.dot(R).dot(Fx)
+        self.cov_pred = G.dot(self.cov_pred).dot(G.T) + Fx.T.dot(event[2]).dot(Fx)
 
 
-    def search_for_landmark(self, N, z):
+    def search_for_landmark(self, z):
+        N = len(self.mean_pred) - 1
         j = 0
         if N>0: # check if the observation corresponds to a already seen landmark
             for i in range(N):
@@ -39,11 +59,14 @@ class SLAM(object):
         return j
 
 
-    def add_unseen_landmark(self, theta, z):
+    def add_unseen_landmark(self, z):
+        theta = self.mean_pred[0][2]
+
         update = np.zeros(3)
         update[0] = self.mean_pred[0][0] + z[0]*math.sin(theta) + z[1]*math.cos(theta)
         update[1] = self.mean_pred[0][1] + z[1]*math.sin(theta) - z[0]*math.cos(theta)
         update[2] = z[2]
+        
         self.mean_pred.append(list(update))
         self.cov_pred = np.bmat([[self.cov_pred, np.zeros((len(self.cov_pred),3))],
                                     [np.zeros((3,len(self.cov_pred))), np.identity(3)]]).A
@@ -79,7 +102,8 @@ class SLAM(object):
         return Fx_j
 
 
-    def update_seen_landmarks(self, j, N, z, Q, R):
+    def update_seen_landmarks(self, j, z, Q):
+        N = len(self.mean_pred) - 1
         x_lm = self.mean_pred[j][0]
         y_lm = self.mean_pred[j][1]
         x_r = self.mean_pred[0][0]
@@ -100,19 +124,18 @@ class SLAM(object):
         self.cov_pred = (np.identity(len(K.dot(H))) - K.dot(H)).dot(self.cov_pred)
 
 
-    def EKF(self, odometry, observations, Q, R):
-        N = len(self.mean_pred) - 1 # nr of landamrks already seen
-        theta = self.mean_pred[0][2]
-        
-        if self.q.get() > 0:
+    def EKF(self):
+
+        event = self.q.get()    # event = ['obs', markers_I_see, Q]
+                                # ou event = ['odo', position_and_quaternions, R]
+        if event[0] == 'odo': # precisa de R e position_and_quaternions
             print('odometry')
-            self.update_robot_pos(N, theta, odometry, R)
-        else:
+            self.update_robot_pos(event) 
+        elif event[0] == 'obs': # precisa de markers_I_see, Q
             print('observations')
-            for z in observations.markersisee: # z = [x y s].T
-                j = self.search_for_landmark(N,z)
+            for z in event[1]: # z = [x y s].T
+                j = self.search_for_landmark(z)
                 if j == 0:
-                    self.add_unseen_landmark(theta, z)
-                    N += 1
-                    j = N
-                self.update_seen_landmarks(j, N, z, Q, R)
+                    self.add_unseen_landmark(z)
+                    j = len(self.mean_pred) - 1
+                self.update_seen_landmarks(j, z, event[2])

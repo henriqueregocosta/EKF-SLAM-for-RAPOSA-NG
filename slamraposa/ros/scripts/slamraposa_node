@@ -10,21 +10,34 @@ import observations_function as obs
 import odometry_function as odo
 import slamraposa_ros.slamraposa_node
 
+
+def update_noises(observations, odometry, Q, R):
+    observations.Q = Q
+    observations.R = R
+
+    odometry.Q = Q
+    odometry.R = R
+
+
 def main():
     rospy.init_node('slamraposa', anonymous=False)
 
     q = queue.Queue()
+    Q = np.identity(3)
+    R = np.identity(3)
 
     operation = EKF_SLAM.SLAM(q)
 
-    observations = obs.ObsInterp(q)
-    odometry = odo.OdoInterp(q)
+    observations = obs.ObsInterp(q, Q, R)
+    odometry = odo.OdoInterp(q, Q, R)
 
     while not rospy.is_shutdown():
         # atualiza-las em funcao do tempo de espera, da velocidade do robot, etc...
         Q = np.identity(3)
         R = np.identity(3)
-        operation.EKF(odometry, observations, Q, R)
+        update_noises(observations, odometry, Q, R)
+
+        operation.EKF()
 
 if __name__ == '__main__':
     main()
