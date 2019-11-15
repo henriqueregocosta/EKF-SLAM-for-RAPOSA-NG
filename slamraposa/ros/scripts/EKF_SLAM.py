@@ -4,7 +4,7 @@ import math
 class SLAM(object):
     def __init__(self):
         self.mean_pred = [[0, 0, 0]]
-        self.cov_pred = np.identity(3)
+        self.cov_pred = np.zeros((3,3))
 
 
     def sum_to_mean_pred(self, array):
@@ -109,4 +109,4 @@ class SLAM(object):
                     j = N
                 self.update_seen_landmarks(j, N, z, Q, R)
             observations.state = 0
-            print(self.cov_pred)
+            print(self.mean_pred)

@@ -46,7 +46,7 @@ class OdoInterp(object):
         
         delta_rot1 = math.atan2(y_hat,x_hat) - theta
         delta_trans = math.sqrt(x_hat*x_hat + y_hat*y_hat)
-        
+          
         theta_hat = self.quaternions(qx, qy, qz, qw)
         delta_rot2 = theta_hat - theta - delta_rot1
         return delta_rot1, delta_trans, delta_rot2
