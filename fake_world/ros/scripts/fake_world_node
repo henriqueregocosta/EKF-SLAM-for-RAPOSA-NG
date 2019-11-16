@@ -31,7 +31,7 @@ class fake_world(object):
         self.landmark_list, self.trajectory = createworld(world_type)
 
         j=0 # will be useful for something
-        rate = rospy.Rate(1) # T=0.01s
+        rate = rospy.Rate(5) # T=0.01s
 
         while not rospy.is_shutdown() and j<len(self.trajectory)-1:
             robot.send_tf()
@@ -91,6 +91,8 @@ class robot(object):
         pose_msg.pose.orientation.z = quat[2] 
         pose_msg.pose.orientation.w = quat[3] 
 
+        print('ypose')
+        print(self.pose.y)
         # publishes the pose
         self.posePublisher.publish(pose_msg)
 
@@ -115,8 +117,8 @@ class robot(object):
             y_r=self.pose.y
             theta_r=self.pose.theta
 
-            camera_measurement.x=(x_lm - x_r)*math.sin(theta_r) - (y_lm - y_r)*math.cos(theta_r)
-            camera_measurement.y=-(x_lm - x_r)*math.cos(theta_r) + (y_lm - y_r)*math.sin(theta_r)
+            camera_measurement.x=(x_lm - x_r)*math.cos(theta_r) + (y_lm - y_r)*math.sin(theta_r)
+            camera_measurement.y=-(x_lm - x_r)*math.sin(theta_r) + (y_lm - y_r)*math.cos(theta_r)
             camera_measurement.id=landmark_list[i].id
 
             if self.is_in_line_of_sight(camera_measurement):
@@ -138,16 +140,16 @@ class robot(object):
         FOV=120*math.pi/180
         x=camera_measurement.x
         y=camera_measurement.y
-        theta=self.pose.theta # just for now, robot is looking up
+        theta=self.pose.theta
         dist=math.sqrt(x**2+y**2)
-        if x != 0:
-            dydx=abs(y/x)
+        if y != 0:
+            dxdy=abs(x/y)
         else:
             dydx=-1
 
         fov_tangent=abs(math.tan(theta-FOV/2))# tangent of the field of view
 
-        if dydx >= fov_tangent and y>0 and dist<4:
+        if dxdy >= fov_tangent and x>0 and dist<4:
             return True
         else:
             return False
@@ -189,6 +191,7 @@ class robot(object):
         movement.x=trajectory[i+1].x-trajectory[i].x
         movement.y=trajectory[i+1].y-trajectory[i].y
         movement.theta=trajectory[i+1].theta-trajectory[i].theta
+        print(movement.theta)
 
         self.translate_odom(movement)
 
@@ -238,8 +241,8 @@ class robot_pose(object):
 
 def createworld(worldtype):
     if worldtype=='world1':
-        landmark_list=finite_wall(1, 0, 10)
-        trajectory=straightline(3, 0, 90*math.pi/180, 0.1, 100,1)
+        landmark_list=finite_wall(1, 0, 10, 1, 'y')
+        trajectory=straightline(3, 0, 90*math.pi/180, 0.1, 100,'y')
 
     if worldtype=='world2':
         landmark_list=world2_lm()
@@ -248,24 +251,42 @@ def createworld(worldtype):
     if worldtype=='world3':
         landmark_list=world3_lm()
         trajectory=world3_tr()
+
     if worldtype=='world4':
-        trajectory=straightline(0,0,90*math.pi/180,0.5,20,1)
-        landmark_list=finite_wall(1, 0, 10)
+        trajectory=straightline(0,0,90*math.pi/180,0.5,20,'y')
+        landmark_list=finite_wall(1, 0, 10, 1, 'y')
+
+    if worldtype=='world5':
+        trajectory=straightline(0,0,0,0.5,20,'x')
+        landmark_list=finite_wall(0, 1, 10, 1, 'x')
+
+    if worldtype=='world6':
+        trajectory=straightline(0,0,0,0.5,5,'x')
+        landmark_list=finite_wall(0, 1, 10, 1, 'x')
+
 
     return landmark_list, trajectory
 
-def finite_wall(x, y, n):
+def finite_wall(x, y, n, step, direction):
     # ---------------
     # generates and infite wall of landmarks
     # adds a new landmark with the same x-coordinate
     # of the last one but one unit ahead in the
     # y-axis
     # ---------------
+
+    if direction=='x':
+        inc_x=1
+        inc_y=0
+    else:
+        inc_x=0
+        inc_y=1
+
     wall=[landmark(x,y,0)]
     i=0
     while i<n:
-        x=x
-        y=y+1;
+        x=x+inc_x*step
+        y=y+inc_y*step
         identif=i+1;
         new_landmark=landmark(x,y,identif)
         wall.append(new_landmark)
@@ -279,19 +300,24 @@ def straightline(x, y, theta, step, n, direction):
     # and robot looking up (theta=90deg)
     # -------------
     # if direction is 1 direction is y, 0 otherwise
-    identif=0
+    if direction=='x':
+        inc_x=1
+        inc_y=0
+    else:
+        inc_x=0
+        inc_y=1
+
     trajectory=[robot_pose()]
     trajectory[0].x=x
     trajectory[0].y=y
     trajectory[0].theta=theta
     for i in range(n):
         point=robot_pose()
-        point.x=trajectory[i].x
-        point.y=trajectory[i].y+direction*step
+        point.x=trajectory[i].x+inc_x*step
+        point.y=trajectory[i].y+inc_y*step
         point.theta=trajectory[i].theta
         trajectory.append(point)
 
-    print(trajectory[0].y)
     return trajectory
 
 def world2_lm():
@@ -535,7 +561,7 @@ def world3_tr():
 def main():
     fake_world1=fake_world()
     robot1=robot()
-    fake_world1.run_sim('world4', robot1)
+    fake_world1.run_sim('world6', robot1)
 
 if __name__ == '__main__':
     main()

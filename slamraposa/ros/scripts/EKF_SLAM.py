@@ -20,7 +20,11 @@ class SLAM(object):
         a = delta_trans*math.cos(theta + delta_rot1)
         b = delta_trans*math.sin(theta + delta_rot1)
         c = delta_rot1 + delta_rot2
-        self.sum_to_mean_pred(np.dot(Fx.T,np.array([a, b, c])))
+
+        print('pose in odometry')
+        print([self.mean_pred[0][0], self.mean_pred[0][1], self.mean_pred[0][2]])
+
+        self.sum_to_mean_pred(np.dot(Fx.T,np.array([[a], [b], [c]])))
         
         g = np.matrix([[0, 0, -b],[0, 0, a],[0, 0, 0]])
         G = np.identity(3*N+3) + np.dot(np.dot(Fx.T,g),Fx)
@@ -29,12 +33,16 @@ class SLAM(object):
 
     def add_unseen_landmark(self, theta, z):
         update = np.zeros(3)
-        update[0] = self.mean_pred[0][0] + z[0]*math.sin(theta) + z[1]*math.cos(theta)
-        update[1] = self.mean_pred[0][1] + z[1]*math.sin(theta) - z[0]*math.cos(theta)
+        update[0] = self.mean_pred[0][0] + z[0]*math.cos(theta) - z[1]*math.sin(theta)
+        update[1] = self.mean_pred[0][1] + z[0]*math.sin(theta) + z[1]*math.cos(theta)
         update[2] = z[2]
         self.mean_pred.append(list(update))
         self.cov_pred = np.bmat([[self.cov_pred, np.zeros((len(self.cov_pred),3))],
                                     [np.zeros((3,len(self.cov_pred))), np.identity(3)]]).A
+
+        # debug
+        print('update')
+        print([update[0],update[1],update[2]])
 
 
     def predict_landmark_pos(self, j):
@@ -45,9 +53,16 @@ class SLAM(object):
         theta_r = self.mean_pred[0][2]
         
         z_pred = np.zeros(3)
+
+        # debug
+
+        print('x_lm, y_lm')
+        print([x_lm, y_lm])
+        print('x_r, y_r')
+        print([x_r, y_r])
         
-        z_pred[0] = (x_lm - x_r)*math.sin(theta_r) - (y_lm - y_r)*math.cos(theta_r)
-        z_pred[1] = -(x_lm - x_r)*math.cos(theta_r) + (y_lm - y_r)*math.sin(theta_r)
+        z_pred[0] = (x_lm - x_r)*math.cos(theta_r) + (y_lm - y_r)*math.sin(theta_r)
+        z_pred[1] = -(x_lm - x_r)*math.sin(theta_r) + (y_lm - y_r)*math.cos(theta_r)
         z_pred[2] = self.mean_pred[j][2]
         return z_pred
 
@@ -77,15 +92,36 @@ class SLAM(object):
         
         Fx_j = self.compute_selection_matrix(j, N)
 
-        h = np.matrix([[-math.sin(theta_r), math.cos(theta_r), (x_lm-x_r)*math.cos(theta_r)+(y_lm-y_r)*math.sin(theta_r), math.sin(theta_r), -math.cos(theta_r), 0],
-            [math.cos(theta_r), -math.sin(theta_r), (x_lm-x_r)*math.sin(theta_r)+(y_lm-y_r)*math.cos(theta_r), -math.cos(theta_r), math.sin(theta_r), 0],
+        h = np.matrix([[-math.cos(theta_r), -math.sin(theta_r), -(x_lm-x_r)*math.sin(theta_r)+(y_lm-y_r)*math.cos(theta_r), math.cos(theta_r), math.sin(theta_r), 0],
+            [math.sin(theta_r), -math.cos(theta_r), -(x_lm-x_r)*math.cos(theta_r)-(y_lm-y_r)*math.sin(theta_r), -math.sin(theta_r), math.cos(theta_r), 0],
             [0, 0, 0, 0, 0, 1]])
         H = np.dot(h, Fx_j)
         
         K = self.cov_pred.dot(H.T).dot(np.linalg.inv(H.dot(self.cov_pred).dot(H.T) + Q))
 
+        # debug
+        # print('theta_r before kalman')
+        # print(self.mean_pred[0][2])
+
+        print('z')
+        print(z[0])
+        print(z[1])
+        print(z[2])
+
+        print('theta_r')
+        print(theta_r)
+
+        print('z_pred')
+        print(z_pred[0])
+        print(z_pred[1])
+        print(z_pred[2])
+
         self.sum_to_mean_pred(K.dot(np.expand_dims(z-z_pred, axis=1)))
         self.cov_pred = (np.identity(len(K.dot(H))) - K.dot(H)).dot(self.cov_pred)
+
+        # debug
+        # print('theta_r after kalman')
+        # print(self.mean_pred[0][2])
 
 
     def EKF(self, odometry, observations, Q, R):
@@ -93,7 +129,7 @@ class SLAM(object):
         theta = self.mean_pred[0][2]
         
         if odometry.state == 1:
-            print('odometry')
+            # print('odometry')
             self.update_robot_pos(N, theta, odometry, R)
             odometry.state = 0
         if observations.state == 1:
@@ -108,5 +144,6 @@ class SLAM(object):
                     N += 1
                     j = N
                 self.update_seen_landmarks(j, N, z, Q, R)
+
             observations.state = 0
-            print(self.mean_pred)
+

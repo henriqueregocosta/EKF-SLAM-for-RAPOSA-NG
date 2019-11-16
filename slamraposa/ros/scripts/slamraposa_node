@@ -22,8 +22,8 @@ def main():
 
     while not rospy.is_shutdown():
         # atualiza-las em funcao do tempo de espera, da velocidade do robot, etc...
-        Q = 0.01*np.identity(3)
-        R = 0.01*np.identity(3)
+        Q = np.identity(3)
+        R = np.identity(3)
         operation.EKF(odometry, observations, Q, R)
         x.append(operation.mean_pred[0][0])
         y.append(operation.mean_pred[0][1])
