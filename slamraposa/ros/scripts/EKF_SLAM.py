@@ -1,7 +1,8 @@
 import math
 import multiprocessing
 import numpy as np
-import thread
+import _thread
+import rospy
 
 class SLAM(object):
     def __init__(self, queue_name):
@@ -89,8 +90,6 @@ class SLAM(object):
         
         z_pred = np.zeros(3)
 
-        # debug
-
         print('x_lm, y_lm')
         print([x_lm, y_lm])
         print('x_r, y_r')
@@ -142,33 +141,12 @@ class SLAM(object):
         
         K = self.cov_pred.dot(H.T).dot(np.linalg.inv(H.dot(self.cov_pred).dot(H.T) + Q))
 
-        # debug
-        # print('theta_r before kalman')
-        # print(self.mean_pred[0][2])
-
-        print('z')
-        print(z[0])
-        print(z[1])
-        print(z[2])
-
-        print('theta_r')
-        print(theta_r)
-
-        print('z_pred')
-        print(z_pred[0])
-        print(z_pred[1])
-        print(z_pred[2])
-
         self.sum_to_mean_pred(K.dot(np.expand_dims(z-z_pred, axis=1)))
         self.cov_pred = (np.identity(len(K.dot(H))) - K.dot(H)).dot(self.cov_pred)
 
-        # debug
-        # print('theta_r after kalman')
-        # print(self.mean_pred[0][2])
-
     def EKF(self):
 
-        event = self.q.get()    # event = ['obs', markers_I_see, Q]
+        event = self.q.get(timeout=10)    # event = ['obs', markers_I_see, Q]
                                 # ou event = ['odo', position_and_quaternions, R]
         if event[0] == 'odo': # precisa de R e position_and_quaternions
             print('odometry')

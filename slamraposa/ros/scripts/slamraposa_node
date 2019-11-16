@@ -1,14 +1,14 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import math
 import numpy as np
 import queue
 import rospy
-
 import EKF_SLAM
 import observations_function as obs
 import odometry_function as odo
 import showslam
+import matplotlib.pyplot as plt
 import slamraposa_ros.slamraposa_node
 
 
@@ -45,7 +45,7 @@ def main():
         operation.EKF()
         x.append(operation.mean_pred[0][0])
         y.append(operation.mean_pred[0][1])
-        
+
     showslam.plot_SLAM(x,y,operation.mean_pred)
 
 if __name__ == '__main__':
