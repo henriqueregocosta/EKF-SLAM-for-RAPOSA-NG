@@ -1,20 +1,35 @@
 #!/usr/bin/env python
-import slamraposa_ros.slamraposa_node
-import numpy as np
+
 import math
+import numpy as np
+import queue
 import rospy
+
+import EKF_SLAM
 import observations_function as obs
 import odometry_function as odo
-import EKF_SLAM
 import showslam
+import slamraposa_ros.slamraposa_node
 
+
+def update_noises(observations, odometry, Q, R):
+    observations.Q = Q
+    observations.R = R
+
+    odometry.Q = Q
+    odometry.R = R
 
 def main():
     rospy.init_node('slamraposa', anonymous=False)
-    operation = EKF_SLAM.SLAM()
 
-    observations = obs.ObsInterp()
-    odometry = odo.OdoInterp()
+    q = queue.Queue()
+    Q = np.identity(3)
+    R = np.identity(3)
+
+    operation = EKF_SLAM.SLAM(q)
+
+    observations = obs.ObsInterp(q, Q, R)
+    odometry = odo.OdoInterp(q, Q, R)
 
     # to plot the results
     x=[]
@@ -24,10 +39,13 @@ def main():
         # atualiza-las em funcao do tempo de espera, da velocidade do robot, etc...
         Q = np.identity(3)
         R = np.identity(3)
-        operation.EKF(odometry, observations, Q, R)
+
+        update_noises(observations, odometry, Q, R)
+
+        operation.EKF()
         x.append(operation.mean_pred[0][0])
         y.append(operation.mean_pred[0][1])
-
+        
     showslam.plot_SLAM(x,y,operation.mean_pred)
 
 if __name__ == '__main__':
