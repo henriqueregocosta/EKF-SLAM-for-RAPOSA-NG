@@ -132,15 +132,17 @@ class SLAM(object):
     def EKF(self, event):
 
         if event[0] == 'odo': # precisa de R e position_and_quaternions
-            print('odometry')
             self.update_robot_pos(event) 
+       
         elif event[0] == 'obs': # precisa de markers_I_see, Q
-            print('observations')
             for z in event[1]: # z = [x y s].T
                 j = self.search_for_landmark(z)
                 if j == 0:
                     self.add_unseen_landmark(z)
                     j = len(self.mean_pred) - 1
                 self.update_seen_landmarks(j, z, event[2])
+       
         elif event[0] == 'end':
             pass
+       
+        print(event[0])
