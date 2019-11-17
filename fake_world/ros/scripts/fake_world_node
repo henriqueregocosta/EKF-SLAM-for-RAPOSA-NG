@@ -91,8 +91,6 @@ class robot(object):
         pose_msg.pose.orientation.z = quat[2] 
         pose_msg.pose.orientation.w = quat[3] 
 
-        print('ypose')
-        print(self.pose.y)
         # publishes the pose
         self.posePublisher.publish(pose_msg)
 
@@ -191,7 +189,6 @@ class robot(object):
         movement.x=trajectory[i+1].x-trajectory[i].x
         movement.y=trajectory[i+1].y-trajectory[i].y
         movement.theta=trajectory[i+1].theta-trajectory[i].theta
-        print(movement.theta)
 
         self.translate_odom(movement)
 

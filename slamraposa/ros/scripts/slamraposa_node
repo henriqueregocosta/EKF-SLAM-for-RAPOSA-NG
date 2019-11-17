@@ -15,7 +15,7 @@ import slamraposa_ros.slamraposa_node
 
 
 def check_for_shutdown(queue, observations, odometry):
-    while observations.subs.get_num_connections() * odometry.subs.get_num_connections():
+    while observations.subs.get_num_connections() and odometry.subs.get_num_connections():
         pass
     queue.put(['end'])
 
@@ -40,17 +40,19 @@ def main():
     x=[]
     y=[]
 
+    first = 1
     while not rospy.is_shutdown():
-        # atualiza-las em funcao do tempo de espera, da velocidade do robot, etc...
-        
-        if observations.subs.get_num_connections() * odometry.subs.get_num_connections():
-            thread.start_new_thread(check_for_shutdown, (q, observations, odometry))
+
+        if observations.subs.get_num_connections() and odometry.subs.get_num_connections():
+            
+            if first:
+                thread.start_new_thread(check_for_shutdown, (q, observations, odometry))
+                first = 0
             
             Q = np.identity(3)
             R = np.identity(3)
 
             update_noises(observations, odometry, Q, R)
-
 
             event = q.get()     # event = ['obs', markers_I_see, Q]
                                 # or event = ['odo', position_and_quaternions, R]
@@ -58,8 +60,8 @@ def main():
 
             x.append(operation.mean_pred[0][0])
             y.append(operation.mean_pred[0][1])
-
-        else:
+        
+        elif not first:
             break
 
     showslam.plot_SLAM(x,y,operation.mean_pred)
