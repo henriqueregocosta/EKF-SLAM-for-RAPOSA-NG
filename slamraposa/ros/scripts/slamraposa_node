@@ -1,9 +1,12 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2.7
 
+import matplotlib.pyplot as plt
 import numpy as np
 import queue
 import rospy
+import showslam
 import thread
+
 
 import EKF_SLAM
 import observations_function as obs
@@ -11,8 +14,8 @@ import odometry_function as odo
 import slamraposa_ros.slamraposa_node
 
 
-def check_for_shutdown(queue):
-    while not rospy.is_shutdown():
+def check_for_shutdown(queue, observations, odometry):
+    while observations.subs.get_num_connections() * odometry.subs.get_num_connections():
         pass
     queue.put(['end'])
 
@@ -20,7 +23,6 @@ def check_for_shutdown(queue):
 def update_noises(observations, odometry, Q, R):
     observations.Q = Q
     odometry.R = R
-
 
 def main():
     rospy.init_node('slamraposa', anonymous=False)
@@ -34,19 +36,33 @@ def main():
     observations = obs.ObsInterp(q, Q)
     odometry = odo.OdoInterp(q, R)
 
-    thread.start_new_thread(check_for_shutdown, (q, ))
+    # to plot the results
+    x=[]
+    y=[]
 
     while not rospy.is_shutdown():
         # atualiza-las em funcao do tempo de espera, da velocidade do robot, etc...
         
-        Q = np.identity(3)
-        R = np.identity(3)
-        update_noises(observations, odometry, Q, R)
+        if observations.subs.get_num_connections() * odometry.subs.get_num_connections():
+            thread.start_new_thread(check_for_shutdown, (q, observations, odometry))
+            
+            Q = np.identity(3)
+            R = np.identity(3)
 
-        event = q.get()     # event = ['obs', markers_I_see, Q]
-                            # or event = ['odo', position_and_quaternions, R]
-        operation.EKF(event)
+            update_noises(observations, odometry, Q, R)
 
+
+            event = q.get()     # event = ['obs', markers_I_see, Q]
+                                # or event = ['odo', position_and_quaternions, R]
+            operation.EKF(event)
+
+            x.append(operation.mean_pred[0][0])
+            y.append(operation.mean_pred[0][1])
+
+        else:
+            break
+
+    showslam.plot_SLAM(x,y,operation.mean_pred)
 
 if __name__ == '__main__':
     main()
