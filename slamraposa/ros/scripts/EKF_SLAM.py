@@ -1,13 +1,10 @@
 import math
-import multiprocessing
 import numpy as np
-import thread
 
 class SLAM(object):
     def __init__(self, queue_name):
         self.mean_pred = [[0, 0, 0]]
         self.cov_pred = np.zeros((3,3))
-        self.q = queue_name
 
 
     def quaternions(self, qx, qy, qz, qw):
@@ -131,10 +128,7 @@ class SLAM(object):
         self.cov_pred = (np.identity(len(K.dot(H))) - K.dot(H)).dot(self.cov_pred)
 
 
-    def EKF(self):
-
-        event = self.q.get()    # event = ['obs', markers_I_see, Q]
-                                # ou event = ['odo', position_and_quaternions, R]
+    def EKF(self, event):
         if event[0] == 'odo': # precisa de R e position_and_quaternions
             print('odometry')
             self.update_robot_pos(event) 
@@ -146,3 +140,5 @@ class SLAM(object):
                     self.add_unseen_landmark(z)
                     j = len(self.mean_pred) - 1
                 self.update_seen_landmarks(j, z, event[2])
+        elif event[0] == 'end':
+            pass

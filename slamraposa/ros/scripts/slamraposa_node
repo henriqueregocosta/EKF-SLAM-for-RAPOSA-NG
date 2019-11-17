@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
-import math
 import numpy as np
 import queue
 import rospy
+import thread
 
 import EKF_SLAM
 import observations_function as obs
@@ -11,11 +11,14 @@ import odometry_function as odo
 import slamraposa_ros.slamraposa_node
 
 
+def check_for_shutdown(queue):
+    while not rospy.is_shutdown():
+        pass
+    queue.put(['end'])
+
+
 def update_noises(observations, odometry, Q, R):
     observations.Q = Q
-    observations.R = R
-
-    odometry.Q = Q
     odometry.R = R
 
 
@@ -28,16 +31,22 @@ def main():
 
     operation = EKF_SLAM.SLAM(q)
 
-    observations = obs.ObsInterp(q, Q, R)
-    odometry = odo.OdoInterp(q, Q, R)
+    observations = obs.ObsInterp(q, Q)
+    odometry = odo.OdoInterp(q, R)
+
+    thread.start_new_thread(check_for_shutdown, (q, ))
 
     while not rospy.is_shutdown():
         # atualiza-las em funcao do tempo de espera, da velocidade do robot, etc...
+        
         Q = np.identity(3)
         R = np.identity(3)
         update_noises(observations, odometry, Q, R)
 
-        operation.EKF()
+        event = q.get()     # event = ['obs', markers_I_see, Q]
+                            # or event = ['odo', position_and_quaternions, R]
+        operation.EKF(event)
+
 
 if __name__ == '__main__':
     main()
