@@ -4,18 +4,22 @@ from visualization_msgs.msg import Marker
 
 class ObsInterp(object):
 
-    def __init__(self):
+    def __init__(self, queue_name, Q, R):
         '''
         Class constructor: will get executed at the moment
         of object creation
         '''
+
         rospy.loginfo('Observations Interpreter Started')
         # subscribe to RaposaNG ARUCO topic
         rospy.Subscriber("fake_obs", MarkerArray, self.ARUCOCallback)
         # define member variable and initialize with a big value
         # it will store the distance from the robot to the walls
-        self.markersisee = []
-        self.state = 0 #
+        
+        self.markers_I_see = []
+        self.q = queue_name
+        self.Q = Q
+        self.R = R
 
     
     def ARUCOCallback(self, msg):
@@ -32,6 +36,6 @@ class ObsInterp(object):
             oid = msg.markers[i].id
             update = [ox, oy, oid]
 
-            self.markersisee.append(update) # the marker is added to the vector
+            self.markers_I_see.append(update) # the marker is added to the vector
 
-        self.state = 1
+        self.q.put(['obs', self.markers_I_see, self.Q])

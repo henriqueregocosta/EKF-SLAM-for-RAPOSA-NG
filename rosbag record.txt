@@ -1,4 +1,4 @@
-rosbag record /client_count /imu/data /joint_states /map /raposang/depth_cam/color/camera_info /raposang/depth_cam/color/image_raw /raposang/odometry_pose /tf /tf_static 
+rosbag record /client_count /imu/data /joint_states /map /raposang/depth_cam/color/camera_info /raposang/depth_cam/color/image_raw /raposang/odometry_pose /raposang/odometry /tf /tf_static /aruco_marker_publisher /aruco_marker_publisher/markers
 
 
 roscore
