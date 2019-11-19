@@ -64,6 +64,11 @@ class SLAM(object):
         update[0] = self.mean_pred[0][0] + z[0]*math.cos(theta) - z[1]*math.sin(theta)
         update[1] = self.mean_pred[0][1] + z[0]*math.sin(theta) + z[1]*math.cos(theta)
         update[2] = z[2]
+
+        print('x, y, theta')
+        print([self.mean_pred[0][0], self.mean_pred[0][1], self.mean_pred[0][2]])
+        print('update')
+        print([update[0], update[1], update[2]])
         
         self.mean_pred.append(list(update))
         self.cov_pred = np.bmat([[self.cov_pred, np.zeros((len(self.cov_pred),3))],
@@ -78,6 +83,9 @@ class SLAM(object):
         theta_r = self.mean_pred[0][2]
         
         z_pred = np.zeros(3)
+
+        print('x_r x_lm in predict')
+        print([x_r, x_lm])
 
         z_pred[0] = (x_lm - x_r)*math.cos(theta_r) + (y_lm - y_r)*math.sin(theta_r)
         z_pred[1] = -(x_lm - x_r)*math.sin(theta_r) + (y_lm - y_r)*math.cos(theta_r)
@@ -124,6 +132,9 @@ class SLAM(object):
         H = np.dot(h, Fx_j)
         
         K = self.cov_pred.dot(H.T).dot(np.linalg.inv(H.dot(self.cov_pred).dot(H.T) + Q))
+
+        print('z, zpred')
+        print([z, z_pred])
 
         self.sum_to_mean_pred(K.dot(np.expand_dims(z-z_pred, axis=1)))
         self.cov_pred = (np.identity(len(K.dot(H))) - K.dot(H)).dot(self.cov_pred)

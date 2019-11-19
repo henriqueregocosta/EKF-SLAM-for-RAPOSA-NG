@@ -6,6 +6,7 @@ import math
 import tf
 import numpy
 import plotresults
+import matplotlib.pyplot as plt
 
 from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Odometry
@@ -29,23 +30,45 @@ class fake_world(object):
     def run_sim(self, world_type, robot):
         # world creation
         self.landmark_list, self.trajectory = createworld(world_type)
+        # first_pose=robot_pose()
+        # first_pose.x=0
+        # first_pose.y=0
+        # first_pose.theta=0
+        # self.trajectory.insert(0,first_pose)
 
         j=0 # will be useful for something
-        rate = rospy.Rate(5) # T=0.01s
+        first=1
+        rate = rospy.Rate(1000) # T=0.01s
+
+        # plot
+        plt.ylim((-1,9))
+        plt.xlim((-1,9))
 
         while not rospy.is_shutdown() and j<len(self.trajectory)-1:
             robot.send_tf()
             robot.compute_pose(self.trajectory, j)
-            robot.compute_movement(self.trajectory, j)
-            robot.compute_observation(self.landmark_list)
+            robot.compute_observation(self.landmark_list, first)
+            robot.compute_movement(self.trajectory, j, first)
+            
+            plt.plot(robot.pose.x, robot.pose.y, 'b*')
+            for i in range(len(self.landmark_list)):
+                for k in range(len(robot.observation)):
+                    if self.landmark_list[i].id==robot.observation[k].id:
+                        plt.plot(self.landmark_list[i].x, self.landmark_list[i].y, 'r^')
 
-            # debug
-            # rospy.loginfo(str(j))
+            plt.draw()
+            plt.pause(0.00000000001)
+
+            if first == 1:
+                first = 0
+                j=-1
 
             j+=1
             rate.sleep()
 
-        plotresults.plot_world(self.landmark_list, self.trajectory, robot.observation, world_type)
+        plt.show()    
+
+        # plotresults.plot_world(self.landmark_list, self.trajectory, robot.observation, world_type)
 
 class robot(object):
     # ----------------
@@ -94,7 +117,7 @@ class robot(object):
         # publishes the pose
         self.posePublisher.publish(pose_msg)
 
-    def compute_observation(self, landmark_list):
+    def compute_observation(self, landmark_list, first):
         # ------------------------------
         # given landmark world coordinates,
         # computes the true pose of the landmark in
@@ -119,14 +142,17 @@ class robot(object):
             camera_measurement.y=-(x_lm - x_r)*math.sin(theta_r) + (y_lm - y_r)*math.cos(theta_r)
             camera_measurement.id=landmark_list[i].id
 
+            # print('camera_measurement before los')
+            # print(([camera_measurement.x, camera_measurement.y, camera_measurement.id]))
+
             if self.is_in_line_of_sight(camera_measurement):
                 self.observation.append(camera_measurement)
                 # debug
                 # rospy.loginfo('Observations')
                 # rospy.loginfo(str([camera_measurement.x, camera_measurement.y, camera_measurement.id]))
-                #rospy.loginfo(str(camera_measurement.x))
-                #rospy.loginfo(str(camera_measurement.y))
-                #rospy.loginfo(str(camera_measurement.id))
+
+            #if first == 1:
+                # observation=[]
 
         self.translate_obs(self.observation)
 
@@ -135,20 +161,26 @@ class robot(object):
         # check if camera measurement is in line of sight
         # -----------------------
 
-        FOV=120*math.pi/180
+        FOV=140*math.pi/180
         x=camera_measurement.x
         y=camera_measurement.y
         theta=self.pose.theta
         dist=math.sqrt(x**2+y**2)
+        # if y != 0:
+        #     dxdy=abs(x/y)
+        # else:
+        #     dydx=-1
+
+        # fov_tangent=abs(math.tan(theta-FOV/2))# tangent of the field of view
+
+        # if dxdy >= fov_tangent and x>0 and dist<4:
         if y != 0:
-            dxdy=abs(x/y)
+            obs_angle = math.atan(x/y)
         else:
-            dydx=-1
+            obs_angle = FOV/2+1
 
-        fov_tangent=abs(math.tan(theta-FOV/2))# tangent of the field of view
-
-        if dxdy >= fov_tangent and x>0 and dist<4:
-            return True
+        if obs_angle > -FOV/2 and obs_angle < FOV/2 and x > 0 and dist < 4:
+             return True
         else:
             return False
     
@@ -180,7 +212,7 @@ class robot(object):
         # publishes markerArray    
         self.obsPublisher.publish(markerArray)
 
-    def compute_movement(self, trajectory, i):
+    def compute_movement(self, trajectory, i, first):
         # ------------------------
         # given the robot pose and the trajectory
         # computes the movement vector
@@ -189,6 +221,11 @@ class robot(object):
         movement.x=trajectory[i+1].x-trajectory[i].x
         movement.y=trajectory[i+1].y-trajectory[i].y
         movement.theta=trajectory[i+1].theta-trajectory[i].theta
+
+        if first==1:
+            movement.x=0
+            movement.y=0
+            movement.theta=0
 
         self.translate_odom(movement)
 
@@ -258,8 +295,8 @@ def createworld(worldtype):
         landmark_list=finite_wall(0, 1, 10, 1, 'x')
 
     if worldtype=='world6':
-        trajectory=straightline(0,0,0,0.5,5,'x')
-        landmark_list=finite_wall(0, 1, 10, 1, 'x')
+        trajectory = straightline(0,0,0,0.01,250,'x')
+        landmark_list = finite_wall(0, 1, 10, 1, 'x')
 
 
     return landmark_list, trajectory
