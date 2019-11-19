@@ -6,6 +6,7 @@ import math
 import tf
 import numpy
 import plotresults
+import Queue
 import matplotlib.pyplot as plt
 
 from geometry_msgs.msg import PoseStamped
@@ -27,6 +28,7 @@ class fake_world(object):
         # print message in terminal
         rospy.loginfo('fake_world node is online')
 
+
     def run_sim(self, world_type, robot):
         # world creation
         self.landmark_list, self.trajectory = createworld(world_type)
@@ -38,17 +40,22 @@ class fake_world(object):
 
         j=0 # will be useful for something
         first=1
-        rate = rospy.Rate(1000) # T=0.01s
+        rate = rospy.Rate(100000) # T=0.01s
 
         # plot
         plt.ylim((-1,9))
         plt.xlim((-1,9))
 
+        
+
         while not rospy.is_shutdown() and j<len(self.trajectory)-1:
             robot.send_tf()
             robot.compute_pose(self.trajectory, j)
-            robot.compute_observation(self.landmark_list, first)
+            robot.now = rospy.Time.now()
             robot.compute_movement(self.trajectory, j, first)
+            if j%3 == 0:
+                robot.now = rospy.Time.now()
+                robot.compute_observation(self.landmark_list, first, j)
             
             plt.plot(robot.pose.x, robot.pose.y, 'b*')
             for i in range(len(self.landmark_list)):
@@ -117,7 +124,7 @@ class robot(object):
         # publishes the pose
         self.posePublisher.publish(pose_msg)
 
-    def compute_observation(self, landmark_list, first):
+    def compute_observation(self, landmark_list, first, j):
         # ------------------------------
         # given landmark world coordinates,
         # computes the true pose of the landmark in
@@ -154,7 +161,7 @@ class robot(object):
             #if first == 1:
                 # observation=[]
 
-        self.translate_obs(self.observation)
+        self.translate_obs(self.observation, j)
 
     def is_in_line_of_sight(self, camera_measurement):
         # -----------------------
@@ -184,7 +191,7 @@ class robot(object):
         else:
             return False
     
-    def translate_obs(self, obs):
+    def translate_obs(self, obs, j):
         # ------------------------------
         # translate obs vector into marker array
         # message
@@ -197,6 +204,8 @@ class robot(object):
             marker=Marker()
             marker.header.frame_id = "/base_link"
             marker.type = marker.SPHERE
+            marker.header.stamp.nsecs = self.now.nsecs
+            marker.header.stamp.secs = self.now.secs
             marker.scale.x = 0.5
             marker.scale.y = 0.5
             marker.scale.z = 0.5
@@ -206,6 +215,7 @@ class robot(object):
             marker.color.b = 0.0
             marker.pose.position.x = obs[i].x
             marker.pose.position.y = obs[i].y
+            marker.pose.position.z = j
             marker.id = obs[i].id
             markerArray.markers.append(marker)
 
@@ -222,19 +232,22 @@ class robot(object):
         movement.y=trajectory[i+1].y-trajectory[i].y
         movement.theta=trajectory[i+1].theta-trajectory[i].theta
 
+
         if first==1:
             movement.x=0
             movement.y=0
             movement.theta=0
 
-        self.translate_odom(movement)
+        self.translate_odom(movement,i)
 
-    def translate_odom(self, movement):
+    def translate_odom(self, movement,i):
         # --------------------------------------
         # translates movement info into odom message
         # --------------------------------------
         # creates empty pose message
         odom_msg=Odometry()
+        odom_msg.header.stamp.nsecs = self.now.nsecs
+        odom_msg.header.stamp.secs = self.now.secs
         odom_msg.pose.pose.position.x = movement.x
         odom_msg.pose.pose.position.y = movement.y
         quaternion = tf.transformations.quaternion_from_euler(0, 0, movement.theta)
@@ -242,6 +255,7 @@ class robot(object):
         odom_msg.pose.pose.orientation.y = quaternion[1]
         odom_msg.pose.pose.orientation.z = quaternion[2]
         odom_msg.pose.pose.orientation.w = quaternion[3]
+        odom_msg.pose.pose.position.z = i
 
         # publishes odometry message
         self.odomPublisher.publish(odom_msg)
@@ -295,7 +309,7 @@ def createworld(worldtype):
         landmark_list=finite_wall(0, 1, 10, 1, 'x')
 
     if worldtype=='world6':
-        trajectory = straightline(0,0,0,0.01,250,'x')
+        trajectory = straightline(0,0,0,0.01,100,'x')
         landmark_list = finite_wall(0, 1, 10, 1, 'x')
 
 

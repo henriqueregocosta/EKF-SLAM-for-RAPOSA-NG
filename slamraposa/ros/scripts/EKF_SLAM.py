@@ -135,7 +135,6 @@ class SLAM(object):
 
         print('z, zpred')
         print([z, z_pred])
-
         self.sum_to_mean_pred(K.dot(np.expand_dims(z-z_pred, axis=1)))
         self.cov_pred = (np.identity(len(K.dot(H))) - K.dot(H)).dot(self.cov_pred)
 
