@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import Queue
 import rospy
-import showslam
 import thread
 
 
@@ -47,7 +46,6 @@ def main():
     while not rospy.is_shutdown():
 
         if observations.subs.get_num_connections() and odometry.subs.get_num_connections():
-            
             if first:
                 thread.start_new_thread(check_for_shutdown, (q, observations, odometry))
                 first = 0
@@ -61,8 +59,7 @@ def main():
                                 # or event = ['odo', position_and_quaternions, R]
             operation.EKF(event)
 
-            # -----------------------------------
-            # plot
+            # plotting
 
             plt.plot(operation.mean_pred[0][0], operation.mean_pred[0][1], 'b*')
             for i in range(1, len(operation.mean_pred)):
@@ -72,16 +69,14 @@ def main():
 
             x.append(operation.mean_pred[0][0])
             y.append(operation.mean_pred[0][1])
-            # -----------------------------------
         
         elif not first:
             break
 
     # plot
+
     plt.plot(x, y, '-b')
     plt.show()
-
-    # showslam.plot_SLAM(x,y,operation.mean_pred)
 
 if __name__ == '__main__':
     main()
