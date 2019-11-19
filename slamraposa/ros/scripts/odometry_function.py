@@ -1,11 +1,9 @@
 import rospy
-import math
-
 from nav_msgs.msg import Odometry
 
 class OdoInterp(object):
 
-    def __init__(self, queue_name, Q, R):
+    def __init__(self, queue_name, R):
         '''
         Class constructor: will get executed at the moment
         of object creation
@@ -13,13 +11,11 @@ class OdoInterp(object):
 
         rospy.loginfo('Odometry Interpreter Started')
         # subscribe to RaposaNG ARUCO topic
-        rospy.Subscriber("fake_odom", Odometry, self.ARUCOCallback)
+        self.subs = rospy.Subscriber("fake_odom", Odometry, self.ARUCOCallback)
         # define member variable and initialize with a big value
         # it will store the distance from the robot to the walls
         
-        self.position_and_quaternions = []
         self.q = queue_name
-        self.Q = Q
         self.R = R
     
     def ARUCOCallback(self, msg):
@@ -34,39 +30,6 @@ class OdoInterp(object):
         qy = msg.pose.pose.orientation.y
         qz = msg.pose.pose.orientation.z
         qw = msg.pose.pose.orientation.w
-            
-        self.position_and_quaternions = [posx, posy, qx,qy,qz,qw]
 
 
-        self.q.put(['odo', self.position_and_quaternions, self.R])
-
-# <<<<<<< HEAD
-
-#     def quaternions(self, qx, qy, qz, qw):
-#         return math.asin(2*(qx*qz - qw*qy)) 
-
-
-#     def odometry_model(self, theta, odometry):
-#         x_hat, y_hat, qx, qy, qz, qw = self.position_and_quaternions
-        
-#         delta_rot1 = math.atan2(y_hat,x_hat) - theta
-#         delta_trans = math.sqrt(x_hat*x_hat + y_hat*y_hat)
-          
-#         theta_hat = self.quaternions(qx, qy, qz, qw)
-#         delta_rot2 = theta_hat - (theta + delta_rot1)
-        
-#         # debug
-#         # print('atan2')
-#         # print(math.atan2(y_hat,x_hat))
-#         # print('theta')
-#         # print(theta)
-#         # print('theta_hat')
-#         # print(theta_hat)
-#         # print('delta_rot1')
-#         # print(delta_rot1)
-#         # print('delta_trans')
-#         # print(delta_trans)
-#         # print('delta_rot2')
-#         # print(delta_rot2)
-#         return delta_rot1, delta_trans, delta_rot2
-# =======
+        self.q.put(['odo', [posx, posy, qx,qy,qz,qw], self.R])
