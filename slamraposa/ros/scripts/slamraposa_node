@@ -1,52 +1,82 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python2.7
 
-import math
+import matplotlib.pyplot as plt
 import numpy as np
-import queue
+import Queue
 import rospy
+import thread
+
+
 import EKF_SLAM
 import observations_function as obs
 import odometry_function as odo
-import showslam
-import matplotlib.pyplot as plt
 import slamraposa_ros.slamraposa_node
+
+
+def check_for_shutdown(queue, observations, odometry):
+    while observations.subs.get_num_connections() and odometry.subs.get_num_connections():
+        pass
+    queue.put(['end'])
 
 
 def update_noises(observations, odometry, Q, R):
     observations.Q = Q
-    observations.R = R
-
-    odometry.Q = Q
     odometry.R = R
 
 def main():
     rospy.init_node('slamraposa', anonymous=False)
 
-    q = queue.Queue()
+    q = Queue.Queue()
     Q = np.identity(3)
     R = np.identity(3)
 
     operation = EKF_SLAM.SLAM(q)
 
-    observations = obs.ObsInterp(q, Q, R)
-    odometry = odo.OdoInterp(q, Q, R)
+    observations = obs.ObsInterp(q, Q)
+    odometry = odo.OdoInterp(q, R)
 
     # to plot the results
     x=[]
     y=[]
 
+    plt.ylim((-1,9))
+    plt.xlim((-1,9))
+
+    first = 1
     while not rospy.is_shutdown():
-        # atualiza-las em funcao do tempo de espera, da velocidade do robot, etc...
-        Q = np.identity(3)
-        R = np.identity(3)
 
-        update_noises(observations, odometry, Q, R)
+        if observations.subs.get_num_connections() and odometry.subs.get_num_connections():
+            if first:
+                thread.start_new_thread(check_for_shutdown, (q, observations, odometry))
+                first = 0
+            
+            Q = 0.00000001*np.identity(3)
+            R = 0.00000001*np.identity(3)
 
-        operation.EKF()
-        x.append(operation.mean_pred[0][0])
-        y.append(operation.mean_pred[0][1])
+            update_noises(observations, odometry, Q, R)
 
-    showslam.plot_SLAM(x,y,operation.mean_pred)
+            event = q.get()     # event = ['obs', markers_I_see, Q]
+                                # or event = ['odo', position_and_quaternions, R]
+            operation.EKF(event)
+
+            # plotting
+
+            plt.plot(operation.mean_pred[0][0], operation.mean_pred[0][1], 'b*')
+            for i in range(1, len(operation.mean_pred)):
+                plt.plot(operation.mean_pred[i][0],operation.mean_pred[i][1], 'r^')
+            plt.draw()
+            plt.pause(0.00000000001)
+
+            x.append(operation.mean_pred[0][0])
+            y.append(operation.mean_pred[0][1])
+        
+        elif not first:
+            break
+
+    # plot
+
+    plt.plot(x, y, '-b')
+    plt.show()
 
 if __name__ == '__main__':
     main()

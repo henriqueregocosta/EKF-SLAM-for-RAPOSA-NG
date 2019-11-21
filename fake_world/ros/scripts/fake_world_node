@@ -3,9 +3,9 @@
 import fake_world_ros.fake_world_node
 import rospy
 import math
+import numpy as np
 import tf
-import numpy
-import plotresults
+import matplotlib.pyplot as plt
 
 from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Odometry
@@ -13,39 +13,52 @@ from visualization_msgs.msg import MarkerArray
 from visualization_msgs.msg import Marker
 
 class fake_world(object):
-    # ----------------------------------
-    # Receives an array of odometry and
-    # landmark data and computes the 
-    # data to be received by the robot
-    # also receives the type of world and 
-    # trajectory
-    # ----------------------------------
+
     def __init__(self):
         # register node in ROS network
         rospy.init_node('fake_world', anonymous=False)
         # print message in terminal
-        rospy.loginfo('fake_world node is online')
+        rospy.loginfo('fake_world online')
+
 
     def run_sim(self, world_type, robot):
         # world creation
-        self.landmark_list, self.trajectory = createworld(world_type)
+        self.landmarks, self.trajectory = createworld(world_type)
 
-        j=0 # will be useful for something
-        rate = rospy.Rate(5) # T=0.01s
+        # for the plot
+        plt.xlim((-1,9))
+        plt.ylim((-1,9))
+
+        j=0 # counter
+        rate = rospy.Rate(1) # T=0.01s
 
         while not rospy.is_shutdown() and j<len(self.trajectory)-1:
-            robot.send_tf()
-            robot.compute_pose(self.trajectory, j)
+            # new robot pose
+            robot.pose = self.trajectory[j]
             robot.compute_movement(self.trajectory, j)
-            robot.compute_observation(self.landmark_list)
+            # every x movements, provide observation
+            if j%3 == 0:
+                robot.now = rospy.Time.now()
+                robot.compute_observation(self.landmarks, j)
+            
+            # plotting the poses
+            plt.plot(robot.pose[0], robot.pose[1], 'b*')
 
-            # debug
-            # rospy.loginfo(str(j))
+            # plotting the landmarks
+            for i in range(len(self.landmarks)):
+                for k in range(len(robot.observation)):
+                    if self.landmarks[i][2]==robot.observation[k][2]:
+                        plt.plot(self.landmarks[i][0], self.landmarks[i][1], 'r^')
+
+            # update plot
+            plt.draw()
+            plt.pause(0.0000000000000000000000001)
 
             j+=1
             rate.sleep()
 
-        plotresults.plot_world(self.landmark_list, self.trajectory, robot.observation, world_type)
+        # show plot
+        plt.show()    
 
 class robot(object):
     # ----------------
@@ -53,50 +66,14 @@ class robot(object):
     # ----------------
 
     def __init__(self):
-        self.pose=robot_pose()
+        self.pose=[0, 0, 0]
         # setup publishers
         self.posePublisher = rospy.Publisher('fake_pose', PoseStamped, queue_size=10)
         self.obsPublisher = rospy.Publisher('fake_obs',MarkerArray,queue_size=10)
         self.odomPublisher = rospy.Publisher('fake_odom',Odometry,queue_size=10)
+        self.now = rospy.Time.now()
 
-        # tf stuff
-        self.tf_br = tf.TransformBroadcaster()
-
-    def compute_pose(self, trajectory, i):
-        # ------------------------
-        # given the robot pose and the trajectory
-        # computes the movement vector
-        # ------------------------
-        self.pose.x=trajectory[i].x
-        self.pose.y=trajectory[i].y
-        self.pose.theta=trajectory[i].theta
-
-        # rospy.loginfo('Pose')
-        # rospy.loginfo(str([self.pose.x, self.pose.y, self.pose.theta, i]))
-
-        self.translate_pose()
-
-    def translate_pose(self):
-        # ------------------------
-        # given the robot pose and the trajectory
-        # computes the movement vector
-        # ------------------------
-        pose_msg=PoseStamped()
-        pose_msg.header.frame_id = "/base_link"
-        pose_msg.pose.position.x = self.pose.x
-        pose_msg.pose.position.y = self.pose.y
-        quat = tf.transformations.quaternion_from_euler(0, 0, self.pose.theta)
-        pose_msg.pose.orientation.x = quat[0]
-        pose_msg.pose.orientation.y = quat[1] 
-        pose_msg.pose.orientation.z = quat[2] 
-        pose_msg.pose.orientation.w = quat[3] 
-
-        print('ypose')
-        print(self.pose.y)
-        # publishes the pose
-        self.posePublisher.publish(pose_msg)
-
-    def compute_observation(self, landmark_list):
+    def compute_observation(self, landmarks, j):
         # ------------------------------
         # given landmark world coordinates,
         # computes the true pose of the landmark in
@@ -104,175 +81,135 @@ class robot(object):
         # also decides which landmarks are in the
         # robots field of view
         # ------------------------------
-        n=len(landmark_list)
+
         self.observation=[]
 
-        for i in range(n):
-            # compute x and y of landmark
-            # compute x and y of robot
-            camera_measurement=landmark(0,0,0)
-            x_lm=landmark_list[i].x
-            y_lm=landmark_list[i].y
-            x_r=self.pose.x
-            y_r=self.pose.y
-            theta_r=self.pose.theta
+        for i in range(len(landmarks)):
 
-            camera_measurement.x=(x_lm - x_r)*math.cos(theta_r) + (y_lm - y_r)*math.sin(theta_r)
-            camera_measurement.y=-(x_lm - x_r)*math.sin(theta_r) + (y_lm - y_r)*math.cos(theta_r)
-            camera_measurement.id=landmark_list[i].id
+            x_lm=landmarks[i][0]
+            y_lm=landmarks[i][1]
 
-            if self.is_in_line_of_sight(camera_measurement):
-                self.observation.append(camera_measurement)
-                # debug
-                # rospy.loginfo('Observations')
-                # rospy.loginfo(str([camera_measurement.x, camera_measurement.y, camera_measurement.id]))
-                #rospy.loginfo(str(camera_measurement.x))
-                #rospy.loginfo(str(camera_measurement.y))
-                #rospy.loginfo(str(camera_measurement.id))
+            x_r=self.pose[0]
+            y_r=self.pose[1]
+            theta_r=self.pose[2]
 
-        self.translate_obs(self.observation)
+            z = np.zeros(3)
 
-    def is_in_line_of_sight(self, camera_measurement):
+            z[0] = (x_lm - x_r)*math.cos(theta_r) + (y_lm - y_r)*math.sin(theta_r)
+            z[1] = -(x_lm - x_r)*math.sin(theta_r) + (y_lm - y_r)*math.cos(theta_r)
+            z[2] = landmarks[i][2]
+
+            if self.is_in_line_of_sight(z):
+                self.observation.append(z)
+
+        self.translate_obs(self.observation, j)
+
+    def is_in_line_of_sight(self, z):
         # -----------------------
         # check if camera measurement is in line of sight
         # -----------------------
 
-        FOV=120*math.pi/180
-        x=camera_measurement.x
-        y=camera_measurement.y
-        theta=self.pose.theta
-        dist=math.sqrt(x**2+y**2)
-        if y != 0:
-            dxdy=abs(x/y)
-        else:
-            dydx=-1
+        # FOV equal to 140 deg
+        FOV=140*math.pi/180
 
-        fov_tangent=abs(math.tan(theta-FOV/2))# tangent of the field of view
+        x = z[0]
+        y = z[1]
+        dist = math.sqrt(x**2+y**2)
 
-        if dxdy >= fov_tangent and x>0 and dist<4:
-            return True
+        if x <= 0 or y == 0 or dist > 4:
+            return False
+
+        obs_angle = math.atan(x/y)
+
+        if obs_angle > -FOV/2 and obs_angle < FOV/2:
+             return True
         else:
             return False
     
-    def translate_obs(self, obs):
+    def translate_obs(self, obs, j):
         # ------------------------------
         # translate obs vector into marker array
         # message
         # -----------------------
 
         # creates empty MarkerArray message
-        n=len(obs)
         markerArray=MarkerArray()
-        for i in range(n):
+
+        robot.now = rospy.Time.now()
+
+        for i in range(len(obs)):
+
             marker=Marker()
+
+            # header
             marker.header.frame_id = "/base_link"
             marker.type = marker.SPHERE
-            marker.scale.x = 0.5
-            marker.scale.y = 0.5
-            marker.scale.z = 0.5
-            marker.color.a = 1.0
-            marker.color.r = 1.0+i
-            marker.color.g = 1.0
-            marker.color.b = 0.0
-            marker.pose.position.x = obs[i].x
-            marker.pose.position.y = obs[i].y
-            marker.id = obs[i].id
+            marker.header.stamp.nsecs = self.now.nsecs
+            marker.header.stamp.secs = self.now.secs
+            # observation
+            marker.pose.position.x = obs[i][0]
+            marker.pose.position.y = obs[i][1]
+            marker.id = obs[i][2]
+
+            marker.pose.position.z = j # for debugging
+
             markerArray.markers.append(marker)
 
         # publishes markerArray    
         self.obsPublisher.publish(markerArray)
 
-    def compute_movement(self, trajectory, i):
+    def compute_movement(self, trajectory, j):
         # ------------------------
-        # given the robot pose and the trajectory
+        # given the trajectory and the current iteration
         # computes the movement vector
         # ------------------------
-        movement=robot_pose()
-        movement.x=trajectory[i+1].x-trajectory[i].x
-        movement.y=trajectory[i+1].y-trajectory[i].y
-        movement.theta=trajectory[i+1].theta-trajectory[i].theta
-        print(movement.theta)
+        movement = np.zeros(3)
+        movement[0] = trajectory[j+1][0] - trajectory[j][0]
+        movement[1] = trajectory[j+1][1] - trajectory[j][1]
+        movement[2] = trajectory[j+1][2] - trajectory[j][2]
 
-        self.translate_odom(movement)
+        self.translate_odom(movement,j)
 
-    def translate_odom(self, movement):
+    def translate_odom(self, movement,i):
         # --------------------------------------
         # translates movement info into odom message
         # --------------------------------------
         # creates empty pose message
         odom_msg=Odometry()
-        odom_msg.pose.pose.position.x = movement.x
-        odom_msg.pose.pose.position.y = movement.y
-        quaternion = tf.transformations.quaternion_from_euler(0, 0, movement.theta)
+
+        robot.now = rospy.Time.now()
+
+        # header
+        odom_msg.header.stamp.nsecs = self.now.nsecs
+        odom_msg.header.stamp.secs = self.now.secs
+
+        # odom
+        odom_msg.pose.pose.position.x = movement[0]
+        odom_msg.pose.pose.position.y = movement[1]
+        quaternion = tf.transformations.quaternion_from_euler(0, 0, movement[2])
         odom_msg.pose.pose.orientation.x = quaternion[0]
         odom_msg.pose.pose.orientation.y = quaternion[1]
         odom_msg.pose.pose.orientation.z = quaternion[2]
         odom_msg.pose.pose.orientation.w = quaternion[3]
 
+        # debugging
+        odom_msg.pose.pose.position.z = i
+
         # publishes odometry message
         self.odomPublisher.publish(odom_msg)
 
-    def send_tf(self):
-        self.tf_br.sendTransform((0, 0, 0),
-                                    tf.transformations.quaternion_from_euler(0, 0, 0),
-                                    rospy.Time.now(),
-                                    '/base_link',
-                                    "map")
-
-class landmark(object):
-    # -------------
-    # creates a list of landmarks and their world 
-    # todo: translate into code the observation model
-    # this needs to be integrated with the algorihm node
-    # -------------
-    def __init__(self, x, y, identif):
-        self.x=x
-        self.y=y
-        self.id=identif
-
-class robot_pose(object):
-    # ----------------
-    # represents the current pose of the robot
-    # ----------------
-    def __init__(self):
-        self.x=0
-        self.y=0
-        self.theta=0 # for now, robot is looking up
-
 def createworld(worldtype):
+
     if worldtype=='world1':
-        landmark_list=finite_wall(1, 0, 10, 1, 'y')
-        trajectory=straightline(3, 0, 90*math.pi/180, 0.1, 100,'y')
+        trajectory = straightline(0,0,0,0.5,5,'x')
+        landmarks = finite_wall(0, 1, 10, 1, 'x')
 
-    if worldtype=='world2':
-        landmark_list=world2_lm()
-        trajectory=world2_tr()
-
-    if worldtype=='world3':
-        landmark_list=world3_lm()
-        trajectory=world3_tr()
-
-    if worldtype=='world4':
-        trajectory=straightline(0,0,90*math.pi/180,0.5,20,'y')
-        landmark_list=finite_wall(1, 0, 10, 1, 'y')
-
-    if worldtype=='world5':
-        trajectory=straightline(0,0,0,0.5,20,'x')
-        landmark_list=finite_wall(0, 1, 10, 1, 'x')
-
-    if worldtype=='world6':
-        trajectory=straightline(0,0,0,0.5,5,'x')
-        landmark_list=finite_wall(0, 1, 10, 1, 'x')
-
-
-    return landmark_list, trajectory
+    return landmarks, trajectory
 
 def finite_wall(x, y, n, step, direction):
     # ---------------
-    # generates and infite wall of landmarks
-    # adds a new landmark with the same x-coordinate
-    # of the last one but one unit ahead in the
-    # y-axis
+    # x, y, first wall point
+    # n number of points
     # ---------------
 
     if direction=='x':
@@ -282,23 +219,23 @@ def finite_wall(x, y, n, step, direction):
         inc_x=0
         inc_y=1
 
-    wall=[landmark(x,y,0)]
+    wall=[[0, 0, 0]]
+
     i=0
     while i<n:
         x=x+inc_x*step
         y=y+inc_y*step
         identif=i+1;
-        new_landmark=landmark(x,y,identif)
-        wall.append(new_landmark)
+        wall.append([x, y, identif])
         i+=1
+
     return wall
 
 def straightline(x, y, theta, step, n, direction):
     # -------------
-    # generates a list of points that corresponds
-    # to a straight line trajectory with an assigned step
-    # and robot looking up (theta=90deg)
+    # x, y, theta first points
     # -------------
+
     # if direction is 1 direction is y, 0 otherwise
     if direction=='x':
         inc_x=1
@@ -307,253 +244,16 @@ def straightline(x, y, theta, step, n, direction):
         inc_x=0
         inc_y=1
 
-    trajectory=[robot_pose()]
-    trajectory[0].x=x
-    trajectory[0].y=y
-    trajectory[0].theta=theta
+    trajectory=[[0, 0, 0]]
+    trajectory[0][0] = x
+    trajectory[0][1] = y
+    trajectory[0][2] = theta
+
     for i in range(n):
-        point=robot_pose()
-        point.x=trajectory[i].x+inc_x*step
-        point.y=trajectory[i].y+inc_y*step
-        point.theta=trajectory[i].theta
-        trajectory.append(point)
-
-    return trajectory
-
-def world2_lm():
-    landmarks=[]
-    # 0
-    landmark1=landmark(-4,0,0)
-    landmarks.append(landmark1)
-    # 1
-    landmark1=landmark(-2,2,1)
-    landmarks.append(landmark1)
-    # 2
-    landmark1=landmark(0,3,2)
-    landmarks.append(landmark1)
-    # 3
-    landmark1=landmark(2,2,3)
-    landmarks.append(landmark1)
-    # 4
-    landmark1=landmark(4,0,4)
-    landmarks.append(landmark1)
-    # 5
-    landmark1=landmark(2,-2,5)
-    landmarks.append(landmark1)
-    # 6
-    landmark1=landmark(0,-3,6)
-    landmarks.append(landmark1)
-    # 7
-    landmark1=landmark(-2,-2,7)
-    landmarks.append(landmark1)
-    return landmarks
-
-def world2_tr():
-    # -------------
-    # generates a list of points that corresponds
-    # to a straight line trajectory with an assigned step
-    # and robot looking up (theta=90deg)
-    # -------------
-    trajectory=[robot_pose()]
-    # from (-1,-1) to (-1,1)
-    x=-1
-    y=-1
-    theta=90*math.pi/180
-    identif=0
-    step=0.1
-    walkin_x=0
-    walkin_y=1
-    n=19
-    trajectory[identif].x=x
-    trajectory[identif].y=y
-    trajectory[identif].theta=theta
-    for i in range(identif, identif + n):
-        point=robot_pose()
-        point.x=trajectory[i].x+walkin_x*step
-        point.y=trajectory[i].y+walkin_y*step
-        point.theta=trajectory[i].theta
-        trajectory.append(point)
-
-    # from (-1,1) to (1,1)
-    x=-1
-    y=1
-    theta=0
-    identif=20
-    step=0.1
-    walkin_x=1
-    walkin_y=0
-    n=19
-    point=robot_pose()
-    point.x=x
-    point.y=y
-    point.theta=theta
-    trajectory.append(point)
-    for i in range(identif, identif + n):
-        point=robot_pose()
-        point.x=trajectory[i].x+walkin_x*step
-        point.y=trajectory[i].y+walkin_y*step
-        point.theta=trajectory[i].theta
-        trajectory.append(point)
-
-    # from (1,1) to (1,-1)
-    x=1
-    y=1
-    theta=270*math.pi/180
-    identif=40
-    step=0.1
-    walkin_x=0
-    walkin_y=-1
-    n=19
-    point=robot_pose()
-    point.x=x
-    point.y=y
-    point.theta=theta
-    trajectory.append(point)
-    for i in range(identif, identif + n):
-        point=robot_pose()
-        point.x=trajectory[i].x+walkin_x*step
-        point.y=trajectory[i].y+walkin_y*step
-        point.theta=trajectory[i].theta
-        trajectory.append(point)
-
-    # from (1,-1) to (-1,-1)
-    x=1
-    y=-1
-    theta=180*math.pi/180
-    identif=60
-    step=0.1
-    walkin_x=-1
-    walkin_y=0
-    n=19
-    point=robot_pose()
-    point.x=x
-    point.y=y
-    point.theta=theta
-    trajectory.append(point)
-    for i in range(identif, identif + n):
-        point=robot_pose()
-        point.x=trajectory[i].x+walkin_x*step
-        point.y=trajectory[i].y+walkin_y*step
-        point.theta=trajectory[i].theta
-        trajectory.append(point)
-
-    return trajectory
-
-def world3_lm():
-    landmarks=[]
-    # 0
-    landmark1=landmark(-4,0,0)
-    landmarks.append(landmark1)
-    # 1
-    landmark1=landmark(-2,2,1)
-    landmarks.append(landmark1)
-    # 2
-    landmark1=landmark(0,3,2)
-    landmarks.append(landmark1)
-    # 3
-    landmark1=landmark(2,2,3)
-    landmarks.append(landmark1)
-    # 4
-    landmark1=landmark(4,0,4)
-    landmarks.append(landmark1)
-    # 5
-    landmark1=landmark(2,-2,5)
-    landmarks.append(landmark1)
-    # 6
-    landmark1=landmark(0,-3,6)
-    landmarks.append(landmark1)
-    # 7
-    landmark1=landmark(-2,-2,7)
-    landmarks.append(landmark1)
-    return landmarks
-
-def world3_tr():
-    # -------------
-    # generates a list of points that corresponds
-    # to a straight line trajectory with an assigned step
-    # and robot looking up (theta=90deg)
-    # -------------
-    trajectory=[robot_pose()]
-    # from (-3,-3) to (-1,1)
-    x=-3
-    y=-3
-    theta=90*math.pi/180
-    identif=0
-    step=0.1
-    walkin_x=0
-    walkin_y=1
-    n=39
-    trajectory[identif].x=x
-    trajectory[identif].y=y
-    trajectory[identif].theta=theta
-    for i in range(identif, identif + n):
-        point=robot_pose()
-        point.x=trajectory[i].x+walkin_x*step
-        point.y=trajectory[i].y+walkin_y*step
-        point.theta=trajectory[i].theta
-        trajectory.append(point)
-
-    # from (-3,1) to (1,1)
-    x=-3
-    y=1
-    theta=0
-    identif=40
-    step=0.1
-    walkin_x=1
-    walkin_y=0
-    n=39
-    point=robot_pose()
-    point.x=x
-    point.y=y
-    point.theta=theta
-    trajectory.append(point)
-    for i in range(identif, identif + n):
-        point=robot_pose()
-        point.x=trajectory[i].x+walkin_x*step
-        point.y=trajectory[i].y+walkin_y*step
-        point.theta=trajectory[i].theta
-        trajectory.append(point)
-
-    # from (1,1) to (1,-1)
-    x=1
-    y=1
-    theta=270*math.pi/180
-    identif=80
-    step=0.1
-    walkin_x=0
-    walkin_y=-1
-    n=19
-    point=robot_pose()
-    point.x=x
-    point.y=y
-    point.theta=theta
-    trajectory.append(point)
-    for i in range(identif, identif + n):
-        point=robot_pose()
-        point.x=trajectory[i].x+walkin_x*step
-        point.y=trajectory[i].y+walkin_y*step
-        point.theta=trajectory[i].theta
-        trajectory.append(point)
-
-    # from (1,-1) to (-1,-1)
-    x=1
-    y=-1
-    theta=180*math.pi/180
-    identif=100
-    step=0.1
-    walkin_x=-1
-    walkin_y=0
-    n=19
-    point=robot_pose()
-    point.x=x
-    point.y=y
-    point.theta=theta
-    trajectory.append(point)
-    for i in range(identif, identif + n):
-        point=robot_pose()
-        point.x=trajectory[i].x+walkin_x*step
-        point.y=trajectory[i].y+walkin_y*step
-        point.theta=trajectory[i].theta
+        point=[0, 0, 0]
+        point[0]=trajectory[i][0]+inc_x*step
+        point[1]=trajectory[i][1]+inc_y*step
+        point[2]=trajectory[i][2]
         trajectory.append(point)
 
     return trajectory
@@ -561,7 +261,7 @@ def world3_tr():
 def main():
     fake_world1=fake_world()
     robot1=robot()
-    fake_world1.run_sim('world6', robot1)
+    fake_world1.run_sim('world1', robot1)
 
 if __name__ == '__main__':
     main()

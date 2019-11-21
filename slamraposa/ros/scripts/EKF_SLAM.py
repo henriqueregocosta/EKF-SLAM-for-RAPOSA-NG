@@ -1,15 +1,11 @@
 import math
-import multiprocessing
 import numpy as np
-import _thread
-import rospy
+
 
 class SLAM(object):
     def __init__(self, queue_name):
         self.mean_pred = [[0, 0, 0]]
         self.cov_pred = np.zeros((3,3))
-
-        self.q = queue_name
 
 
     def quaternions(self, qx, qy, qz, qw):
@@ -30,7 +26,7 @@ class SLAM(object):
     def sum_to_mean_pred(self, array):
         for i in range(len(self.mean_pred)):
             for j in range(3):
-                self.mean_pred[i][j] += float(array[3*i+j]
+                self.mean_pred[i][j] += float(array[3*i+j])
 
 
     def update_robot_pos(self, event):
@@ -43,9 +39,6 @@ class SLAM(object):
         a = delta_trans*math.cos(theta + delta_rot1)
         b = delta_trans*math.sin(theta + delta_rot1)
         c = delta_rot1 + delta_rot2
-
-        print('pose in odometry')
-        print([self.mean_pred[0][0], self.mean_pred[0][1], self.mean_pred[0][2]])
 
         self.sum_to_mean_pred(np.dot(Fx.T,np.array([[a], [b], [c]])))
         
@@ -76,10 +69,6 @@ class SLAM(object):
         self.cov_pred = np.bmat([[self.cov_pred, np.zeros((len(self.cov_pred),3))],
                                     [np.zeros((3,len(self.cov_pred))), np.identity(3)]]).A
 
-        # debug
-        print('update')
-        print([update[0],update[1],update[2]])
-
 
     def predict_landmark_pos(self, j):
         x_lm = self.mean_pred[j][0]
@@ -90,11 +79,6 @@ class SLAM(object):
         
         z_pred = np.zeros(3)
 
-        print('x_lm, y_lm')
-        print([x_lm, y_lm])
-        print('x_r, y_r')
-        print([x_r, y_r])
-        
         z_pred[0] = (x_lm - x_r)*math.cos(theta_r) + (y_lm - y_r)*math.sin(theta_r)
         z_pred[1] = -(x_lm - x_r)*math.sin(theta_r) + (y_lm - y_r)*math.cos(theta_r)
         z_pred[2] = self.mean_pred[j][2]
@@ -141,21 +125,26 @@ class SLAM(object):
         
         K = self.cov_pred.dot(H.T).dot(np.linalg.inv(H.dot(self.cov_pred).dot(H.T) + Q))
 
+        z = [0, 0, 0]
+        z = z_pred
         self.sum_to_mean_pred(K.dot(np.expand_dims(z-z_pred, axis=1)))
         self.cov_pred = (np.identity(len(K.dot(H))) - K.dot(H)).dot(self.cov_pred)
 
-    def EKF(self):
 
-        event = self.q.get(timeout=10)    # event = ['obs', markers_I_see, Q]
-                                # ou event = ['odo', position_and_quaternions, R]
+    def EKF(self, event):
+
         if event[0] == 'odo': # precisa de R e position_and_quaternions
-            print('odometry')
             self.update_robot_pos(event) 
+       
         elif event[0] == 'obs': # precisa de markers_I_see, Q
-            print('observations')
             for z in event[1]: # z = [x y s].T
                 j = self.search_for_landmark(z)
                 if j == 0:
                     self.add_unseen_landmark(z)
                     j = len(self.mean_pred) - 1
                 self.update_seen_landmarks(j, z, event[2])
+       
+        elif event[0] == 'end':
+            pass
+
+        print(event[0])
