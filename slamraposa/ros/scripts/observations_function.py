@@ -14,8 +14,7 @@ class ObsInterp(object):
         self.subs = rospy.Subscriber("fake_obs", MarkerArray, self.ARUCOCallback)
         # define member variable and initialize with a big value
         # it will store the distance from the robot to the walls
-        
-        self.markers_I_see = []
+
         self.q = queue_name
         self.Q = Q
 
@@ -25,7 +24,7 @@ class ObsInterp(object):
         This function gets executed everytime a ARUCO Marker msg is received on the
         topic: /fake_obs
         '''
-
+        self.markers_I_see = []
         N = len(msg.markers)
 
         for i in range(N):
@@ -36,4 +35,11 @@ class ObsInterp(object):
 
             self.markers_I_see.append(update) # the marker is added to the vector
 
+            print('--------------')
+            print('oID')
+            print(oid)
+
         self.q.put(['obs', self.markers_I_see, self.Q])
+
+        print('queue')
+        print(self.q)
