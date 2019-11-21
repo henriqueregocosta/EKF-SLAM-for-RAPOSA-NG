@@ -27,6 +27,8 @@ class ObsInterp(object):
             ox = msg.markers[i].pose.position.x
             oy = msg.markers[i].pose.position.y
             oid = msg.markers[i].id
+            print('oid')
+            print(oid)
             update = [ox, oy, oid]
 
             if observed_features == [None, None, None]: #if it is the first marker ever observed
