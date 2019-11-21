@@ -31,5 +31,4 @@ class OdoInterp(object):
         qz = msg.pose.pose.orientation.z
         qw = msg.pose.pose.orientation.w
 
-
         self.q.put(['odo', [posx, posy, qx,qy,qz,qw], self.R])
