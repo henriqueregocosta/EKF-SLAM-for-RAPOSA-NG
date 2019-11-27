@@ -20,6 +20,27 @@ class SLAM(object):
         
         theta_hat = self.quaternions(qx, qy, qz, qw)
         delta_rot2 = theta_hat - theta - delta_rot1
+
+        if delta_rot1 < -math.pi:
+            delta_rot1 += 2*math.pi
+        if delta_rot1 > math.pi:
+            delta_rot1 += -2*math.pi
+
+        if delta_rot2 < -math.pi:
+            delta_rot2 += 2*math.pi
+        if delta_rot2 > math.pi:
+            delta_rot2 += -2*math.pi
+
+        print('delta_rot1')
+        print(delta_rot1)
+        print('delta_rot2')
+        print(delta_rot2)
+        print('theta_hat')
+        print('delta_rot1')
+        print(delta_rot1)
+        print('delta_rot2')
+        print(delta_rot2)
+
         return delta_rot1, delta_trans, delta_rot2
 
 
@@ -39,6 +60,7 @@ class SLAM(object):
         a = delta_trans*math.cos(theta + delta_rot1)
         b = delta_trans*math.sin(theta + delta_rot1)
         c = delta_rot1 + delta_rot2
+
 
         self.sum_to_mean_pred(np.dot(Fx.T,np.array([[a], [b], [c]])))
         
@@ -76,19 +98,6 @@ class SLAM(object):
         x_r = self.mean_pred[0][0]
         y_r = self.mean_pred[0][1]
         theta_r = self.mean_pred[0][2]
-
-        print('------')
-        print('x_r')
-        print(x_r)
-        print('y_r')
-        print(y_r)
-        print('x_lm')
-        print(x_lm)
-        print('y_lm')
-        print(y_lm)
-        print('-------')
-        print('j')
-        print(j)
 
         z_pred = np.zeros(3)
 
@@ -138,33 +147,17 @@ class SLAM(object):
         
         K = self.cov_pred.dot(H.T).dot(np.linalg.inv(H.dot(self.cov_pred).dot(H.T) + Q))
 
-        # z = [0, 0, 0]
-        # z = z_pred
-        
-        print('-----')
-        print('z_pred')
-        print(z_pred)
-        print('z')
-        print(z)
-
-
         self.sum_to_mean_pred(K.dot(np.expand_dims(z-z_pred, axis=1)))
         self.cov_pred = (np.identity(len(K.dot(H))) - K.dot(H)).dot(self.cov_pred)
 
 
     def EKF(self, event):
 
-        print(event[0])
         if event[0] == 'odo': # precisa de R e position_and_quaternions
             self.update_robot_pos(event) 
        
         elif event[0] == 'obs': # precisa de markers_I_see, Q
-            print('event')
-            print(event[1])
             for z in event[1]: # z = [x y s].T
-                print('-------')
-                print('id')
-                print(z[2])
                 j = self.search_for_landmark(z)
                 if j == 0:
                     self.add_unseen_landmark(z)

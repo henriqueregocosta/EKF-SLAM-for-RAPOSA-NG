@@ -25,11 +25,11 @@ class fake_world(object):
         # world creation
         self.landmarks, self.trajectory = createworld(world_type)
 
-        # for the plot
-        plt.xlim((-1,9))
-        plt.ylim((-1,9))
+        # for the plot, adjust accordingly to world_type
+        plt.xlim((-9,9))
+        plt.ylim((-9,9))
 
-        rate = rospy.Rate(1) # T=0.01s
+        rate = rospy.Rate(4) # T=0.01s
 
         #while not rospy.is_shutdown() and :
         # new robot pose
@@ -49,7 +49,7 @@ class fake_world(object):
                 for i in range(len(self.landmarks)):
                     for k in range(len(robot.observation)):
                         if self.landmarks[i][2]==robot.observation[k][2]:
-                            plt.plot(self.landmarks[i][0], self.landmarks[i][1], 'r^')
+                            plt.plot(self.landmarks[i][0], self.landmarks[i][1], 'r+')
 
                 # update plot
                 plt.draw()
@@ -116,22 +116,12 @@ class robot(object):
         x = z[0]
         y = z[1]
 
-        print('x')
-        print(x)
-        print('y')
-        print(y)
-        print('id')
-        print(z[2])
-
         dist = math.sqrt(x**2+y**2)
 
         if x <= 0 or dist > 4:
-            print('entrou')
             return False
 
         obs_angle = math.atan2(y, x)
-        print('angulo')
-        print(obs_angle)
 
         if obs_angle > -FOV/2 and obs_angle < FOV/2:
              return True
@@ -213,13 +203,26 @@ class robot(object):
 
 def createworld(worldtype):
 
+    trajectory = []
+    landmarks = []
+
     if worldtype=='world1':
         trajectory = straightline(0,0,0,0.5,10,'x')
         landmarks = finite_wall(0, 1, 10, 1, 'x')
+    elif worldtype == 'world2':
+        trajectory = straightline(0,0,0,0.5,12,'x')
+        trajectory.extend(straightline(6, -0.5, -math.pi/2, -0.5, 9, 'y'))
+        trajectory.extend(straightline(6, -5.5, math.pi, -0.5, 12, 'x'))
+        trajectory.extend(straightline(0, -5, math.pi/2, 0.5, 10, 'y'))
+        landmarks = finite_wall(-5, 1, 0, 10, 1, 'x')
+        landmarks.extend(finite_wall(-5, -1, 20, 10, 1, 'x'))
+        print(landmarks)
+        print('-------------')
+        print(trajectory)
 
     return landmarks, trajectory
 
-def finite_wall(x, y, n, step, direction):
+def finite_wall(x, y, first_id, n, step, direction):
     # ---------------
     # x, y, first wall point
     # n number of points
@@ -232,13 +235,13 @@ def finite_wall(x, y, n, step, direction):
         inc_x=0
         inc_y=1
 
-    wall=[[0, 0, 0]]
+    wall=[[x, y, first_id]]
 
     i=0
     while i<n:
         x=x+inc_x*step
         y=y+inc_y*step
-        identif=i+1;
+        identif=i+first_id+1;
         wall.append([x, y, identif])
         i+=1
 
@@ -274,7 +277,7 @@ def straightline(x, y, theta, step, n, direction):
 def main():
     fake_world1=fake_world()
     robot1=robot()
-    fake_world1.run_sim('world1', robot1)
+    fake_world1.run_sim('world2', robot1)
 
 if __name__ == '__main__':
     main()

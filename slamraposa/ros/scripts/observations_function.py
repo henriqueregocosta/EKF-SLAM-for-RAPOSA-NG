@@ -34,12 +34,4 @@ class ObsInterp(object):
             update = [ox, oy, oid]
 
             self.markers_I_see.append(update) # the marker is added to the vector
-
-            print('--------------')
-            print('oID')
-            print(oid)
-
         self.q.put(['obs', self.markers_I_see, self.Q])
-
-        print('queue')
-        print(self.q)
