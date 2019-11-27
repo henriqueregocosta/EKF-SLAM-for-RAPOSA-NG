@@ -1,5 +1,6 @@
 import math
 import numpy as np
+import tf
 
 
 class SLAM(object):
@@ -9,7 +10,8 @@ class SLAM(object):
 
 
     def quaternions(self, qx, qy, qz, qw):
-        return math.asin(2*(qx*qz - qw*qy)) 
+
+        return tf.transformations.euler_from_quaternion((qx, qy, qz, qw)) 
 
 
     def odometry_model(self, theta, odometry):
@@ -18,8 +20,8 @@ class SLAM(object):
         delta_rot1 = math.atan2(y_hat,x_hat) - theta
         delta_trans = math.sqrt(x_hat*x_hat + y_hat*y_hat)
         
-        theta_hat = self.quaternions(qx, qy, qz, qw)
-        delta_rot2 = theta_hat - theta - delta_rot1
+        _,_,theta_hat = self.quaternions(qx, qy, qz, qw)
+        delta_rot2 = theta_hat  - delta_rot1
 
         if delta_rot1 < -math.pi:
             delta_rot1 += 2*math.pi
@@ -36,10 +38,11 @@ class SLAM(object):
         print('delta_rot2')
         print(delta_rot2)
         print('theta_hat')
-        print('delta_rot1')
-        print(delta_rot1)
-        print('delta_rot2')
-        print(delta_rot2)
+        print(theta_hat)
+        print('theta')
+        print(theta)
+
+
 
         return delta_rot1, delta_trans, delta_rot2
 

@@ -29,7 +29,7 @@ class fake_world(object):
         plt.xlim((-9,9))
         plt.ylim((-9,9))
 
-        rate = rospy.Rate(4) # T=0.01s
+        rate = rospy.Rate(10) # T=0.01s
 
         #while not rospy.is_shutdown() and :
         # new robot pose
@@ -170,6 +170,11 @@ class robot(object):
             movement[0] = trajectory[j][0] - trajectory[j-1][0]
             movement[1] = trajectory[j][1] - trajectory[j-1][1]
             movement[2] = trajectory[j][2] - trajectory[j-1][2]
+
+            print('j')
+            print(j)
+            print('thetaodo')
+            print(movement[2])
 
             self.translate_odom(movement,j)
 
