@@ -1,50 +1,12 @@
 import math
 import numpy as np
-import tf
+
 
 
 class SLAM(object):
     def __init__(self, queue_name):
         self.mean_pred = [[0, 0, 0]]
         self.cov_pred = np.zeros((3,3))
-
-
-    def quaternions(self, qx, qy, qz, qw):
-        return tf.transformations.euler_from_quaternion((qx, qy, qz, qw)) 
-
-
-    def odometry_model(self, theta, odometry):
-        x_hat, y_hat, qx, qy, qz, qw = odometry
-        
-        delta_rot1 = math.atan2(y_hat,x_hat) - theta
-        delta_trans = math.sqrt(x_hat*x_hat + y_hat*y_hat)
-        
-        _,_,theta_hat = self.quaternions(qx, qy, qz, qw)
-
-
-        if theta_hat < -math.pi:
-            theta_hat += 2*math.pi
-        if theta_hat > math.pi:
-            theta_hat += -2*math.pi
-
-
-
-        delta_rot2 = theta_hat  - delta_rot1
-
-
-
-        if delta_rot1 < -math.pi:
-            delta_rot1 += 2*math.pi
-        if delta_rot1 > math.pi:
-            delta_rot1 += -2*math.pi
-
-        if delta_rot2 < -math.pi:
-            delta_rot2 += 2*math.pi
-        if delta_rot2 > math.pi:
-            delta_rot2 += -2*math.pi
-
-
-        return delta_rot1, delta_trans, delta_rot2
 
 
     def sum_to_mean_pred(self, array):
@@ -59,7 +21,7 @@ class SLAM(object):
 
         Fx = np.bmat([np.identity(3), np.zeros((3,3*N))])
 
-        delta_rot1, delta_trans, delta_rot2 = self.odometry_model(theta, event[1])
+        delta_rot1, delta_trans, delta_rot2 = event[1]
         a = delta_trans*math.cos(theta + delta_rot1)
         b = delta_trans*math.sin(theta + delta_rot1)
         c = delta_rot1 + delta_rot2
