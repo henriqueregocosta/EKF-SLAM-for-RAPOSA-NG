@@ -170,9 +170,9 @@ class robot(object):
         # ------------------------
         if j>0:
             movement = np.zeros(3)
-            movement[0] = trajectory[j][0] - trajectory[j-1][0]
-            movement[1] = trajectory[j][1] - trajectory[j-1][1]
-            movement[2] = trajectory[j][2] - trajectory[j-1][2]
+            movement[0] = trajectory[j][0]
+            movement[1] = trajectory[j][1]
+            movement[2] = trajectory[j][2]
 
             self.translate_odom(movement,j)
 
