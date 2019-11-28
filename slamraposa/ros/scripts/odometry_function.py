@@ -42,9 +42,6 @@ class OdoInterp(object):
 
         delta_rot1 = math.atan2(posy - self.last_odom[1], posx - self.last_odom[0]) - self.last_odom[2]
         delta_trans = math.sqrt((posy - self.last_odom[1])**2 + (posx - self.last_odom[0])**2)
-        print(theta)
-        print(self.last_odom[2])
-        print(delta_rot1)
         delta_rot2 = theta - self.last_odom[2] - delta_rot1
 
         if delta_rot1 < -math.pi:

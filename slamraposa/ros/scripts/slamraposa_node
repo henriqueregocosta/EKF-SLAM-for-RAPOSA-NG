@@ -50,9 +50,6 @@ def main():
                 thread.start_new_thread(check_for_shutdown, (q, observations, odometry))
                 first = 0
             
-            Q = 0.00000001*np.identity(3)
-            R = 0.00000001*np.identity(3)
-
             plt.plot(operation.mean_pred[0][0], operation.mean_pred[0][1], 'bo')
             for i in range(1, len(operation.mean_pred)):
                 plt.plot(operation.mean_pred[i][0],operation.mean_pred[i][1], 'r+')
