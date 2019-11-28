@@ -137,3 +137,5 @@ class SLAM(object):
        
         elif event[0] == 'end':
             pass
+        elif event[0] == 'kill':
+            pass
