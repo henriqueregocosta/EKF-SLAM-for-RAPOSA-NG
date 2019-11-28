@@ -24,7 +24,7 @@ class ObsInterp(object):
         This function gets executed everytime a ARUCO Marker msg is received on the
         topic: /fake_obs
         '''
-        self.markers_I_see = []
+        markers_I_see = []
         N = len(msg.markers)
 
         for i in range(N):
@@ -33,5 +33,6 @@ class ObsInterp(object):
             oid = msg.markers[i].id
             update = [ox, oy, oid]
 
-            self.markers_I_see.append(update) # the marker is added to the vector
-        self.q.put(['obs', self.markers_I_see, self.Q])
+            markers_I_see.append(update) # the marker is added to the vector
+            
+        self.q.put(['obs', markers_I_see, self.Q])

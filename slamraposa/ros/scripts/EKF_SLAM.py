@@ -10,7 +10,6 @@ class SLAM(object):
 
 
     def quaternions(self, qx, qy, qz, qw):
-
         return tf.transformations.euler_from_quaternion((qx, qy, qz, qw)) 
 
 
@@ -21,7 +20,18 @@ class SLAM(object):
         delta_trans = math.sqrt(x_hat*x_hat + y_hat*y_hat)
         
         _,_,theta_hat = self.quaternions(qx, qy, qz, qw)
+
+
+        if theta_hat < -math.pi:
+            theta_hat += 2*math.pi
+        if theta_hat > math.pi:
+            theta_hat += -2*math.pi
+
+
+
         delta_rot2 = theta_hat  - delta_rot1
+
+
 
         if delta_rot1 < -math.pi:
             delta_rot1 += 2*math.pi
@@ -32,16 +42,6 @@ class SLAM(object):
             delta_rot2 += 2*math.pi
         if delta_rot2 > math.pi:
             delta_rot2 += -2*math.pi
-
-        print('delta_rot1')
-        print(delta_rot1)
-        print('delta_rot2')
-        print(delta_rot2)
-        print('theta_hat')
-        print(theta_hat)
-        print('theta')
-        print(theta)
-
 
 
         return delta_rot1, delta_trans, delta_rot2
@@ -66,6 +66,11 @@ class SLAM(object):
 
 
         self.sum_to_mean_pred(np.dot(Fx.T,np.array([[a], [b], [c]])))
+
+        if self.mean_pred[0][2] < -math.pi:
+            self.mean_pred[0][2] += 2*math.pi
+        if self.mean_pred[0][2] > math.pi:
+            self.mean_pred[0][2] += -2*math.pi
         
         g = np.matrix([[0, 0, -b],[0, 0, a],[0, 0, 0]])
         G = np.identity(3*N+3) + np.dot(np.dot(Fx.T,g),Fx)
@@ -153,14 +158,24 @@ class SLAM(object):
         self.sum_to_mean_pred(K.dot(np.expand_dims(z-z_pred, axis=1)))
         self.cov_pred = (np.identity(len(K.dot(H))) - K.dot(H)).dot(self.cov_pred)
 
+        print('-------')
+        print('z')
+        print(z)
+        print('zpred')
+        print(z_pred)
+
 
     def EKF(self, event):
 
         if event[0] == 'odo': # precisa de R e position_and_quaternions
             self.update_robot_pos(event) 
+            print('mean_pred[0] odom')
+            print(self.mean_pred[0])
        
-        elif event[0] == 'obs': # precisa de markers_I_see, Q
+        elif event[0] == 'obs': # precisa de s_I_see, Q
             for z in event[1]: # z = [x y s].T
+                print('mean_pred[0] obs')
+                print(self.mean_pred[0])
                 j = self.search_for_landmark(z)
                 if j == 0:
                     self.add_unseen_landmark(z)
@@ -168,6 +183,5 @@ class SLAM(object):
                 self.update_seen_landmarks(j, z, event[2])
        
         elif event[0] == 'end':
-            pass
-
-        
+            print('mean_pred')
+            print(self.mean_pred)

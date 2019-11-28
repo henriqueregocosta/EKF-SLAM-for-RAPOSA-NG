@@ -45,12 +45,6 @@ class fake_world(object):
                 # plotting the poses
                 plt.plot(robot.pose[0], robot.pose[1], 'b*')
 
-                # plotting the landmarks
-                for i in range(len(self.landmarks)):
-                    for k in range(len(robot.observation)):
-                        if self.landmarks[i][2]==robot.observation[k][2]:
-                            plt.plot(self.landmarks[i][0], self.landmarks[i][1], 'r+')
-
                 # update plot
                 plt.draw()
                 plt.pause(0.0000000000000000000000001)
@@ -72,7 +66,6 @@ class robot(object):
         self.obsPublisher = rospy.Publisher('fake_obs',MarkerArray,queue_size=10)
         self.odomPublisher = rospy.Publisher('fake_odom',Odometry,queue_size=10)
         self.now = rospy.Time.now()
-        self.observation=[]
 
     def compute_observation(self, landmarks, j):
         # ------------------------------
@@ -83,7 +76,7 @@ class robot(object):
         # robots field of view
         # ------------------------------
 
-        self.observation=[]
+        observation=[]
 
         for i in range(len(landmarks)):
 
@@ -101,9 +94,19 @@ class robot(object):
             z[2] = landmarks[i][2]
 
             if self.is_in_line_of_sight(z):
-                self.observation.append(z)
+                observation.append(z)
 
-        self.translate_obs(self.observation, j)
+        # plotting the landmarks
+        for i in range(len(landmarks)):
+            for k in range(len(observation)):
+                if landmarks[i][2]==observation[k][2]:
+                    plt.plot(landmarks[i][0], landmarks[i][1], 'r+')
+
+        print('------------')
+        print('obsfake')
+        print(observation)
+
+        self.translate_obs(observation, j)
 
     def is_in_line_of_sight(self, z):
         # -----------------------
@@ -124,7 +127,7 @@ class robot(object):
         obs_angle = math.atan2(y, x)
 
         if obs_angle > -FOV/2 and obs_angle < FOV/2:
-             return True
+            return True
         else:
             return False
     
@@ -171,11 +174,6 @@ class robot(object):
             movement[1] = trajectory[j][1] - trajectory[j-1][1]
             movement[2] = trajectory[j][2] - trajectory[j-1][2]
 
-            print('j')
-            print(j)
-            print('thetaodo')
-            print(movement[2])
-
             self.translate_odom(movement,j)
 
     def translate_odom(self, movement,i):
@@ -220,7 +218,10 @@ def createworld(worldtype):
         trajectory.extend(straightline(6, -5.5, math.pi, -0.5, 12, 'x'))
         trajectory.extend(straightline(0, -5, math.pi/2, 0.5, 10, 'y'))
         landmarks = finite_wall(-5, 1, 0, 10, 1, 'x')
-        landmarks.extend(finite_wall(-5, -1, 20, 10, 1, 'x'))
+        landmarks.extend(finite_wall(-5, -1, 30, 10, 0.7, 'x'))
+        landmarks.extend(finite_wall(-4, -4, 50, 10, 1, 'x'))
+        landmarks.extend(finite_wall(-4, -6, 70, 10, 1, 'x'))
+        landmarks.extend(finite_wall(7, 0, 90, 10, -0.5, 'y'))
         print(landmarks)
         print('-------------')
         print(trajectory)
