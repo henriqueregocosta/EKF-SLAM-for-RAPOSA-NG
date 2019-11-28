@@ -14,7 +14,7 @@ class OdoInterp(object):
         rospy.loginfo('Odometry Interpreter Started')
         # subscribe to RaposaNG ARUCO topic
         # raposa topic: /raposang/odometry fake_world topic: fake_odom
-        self.subs = rospy.Subscriber("/raposang/odometry_pose", Odometry, self.ARUCOCallback)
+        self.subs = rospy.Subscriber("fake_odom", Odometry, self.ARUCOCallback)
         # define member variable and initialize with a big value
         # it will store the distance from the robot to the walls
         
@@ -43,9 +43,6 @@ class OdoInterp(object):
 
         delta_rot1 = math.atan2(posy - self.last_odom[1], posx - self.last_odom[0]) - self.last_odom[2]
         delta_trans = math.sqrt((posy - self.last_odom[1])**2 + (posx - self.last_odom[0])**2)
-        print(theta)
-        print(self.last_odom[2])
-        print(delta_rot1)
         delta_rot2 = theta - self.last_odom[2] - delta_rot1
 
         if delta_rot1 < -math.pi:

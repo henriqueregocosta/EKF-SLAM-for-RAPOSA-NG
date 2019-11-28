@@ -1,5 +1,6 @@
 import math
 import numpy as np
+from numpy.linalg import multi_dot
 
 
 
@@ -35,8 +36,8 @@ class SLAM(object):
             self.mean_pred[0][2] += -2*math.pi
         
         g = np.matrix([[0, 0, -b],[0, 0, a],[0, 0, 0]])
-        G = np.identity(3*N+3) + np.dot(np.dot(Fx.T,g),Fx)
-        self.cov_pred = G.dot(self.cov_pred).dot(G.T) + Fx.T.dot(event[2]).dot(Fx)
+        G = np.identity(3*N+3) + multi_dot([Fx.T, g, Fx])
+        self.cov_pred = multi_dot([G, self.cov_pred, G.T]) + multi_dot([Fx.T, event[2], Fx])
 
 
     def search_for_landmark(self, z):
@@ -115,29 +116,19 @@ class SLAM(object):
         h = self.jacobian(j)
         H = np.dot(h, Fx_j)
         
-        K = self.cov_pred.dot(H.T).dot(np.linalg.inv(H.dot(self.cov_pred).dot(H.T) + Q))
+        K = multi_dot([self.cov_pred, H.T, np.linalg.inv(multi_dot([H, self.cov_pred, H.T]) + Q)])
 
-        self.sum_to_mean_pred(K.dot(np.expand_dims(z-z_pred, axis=1)))
-        self.cov_pred = (np.identity(len(K.dot(H))) - K.dot(H)).dot(self.cov_pred)
-
-        print('-------')
-        print('z')
-        print(z)
-        print('zpred')
-        print(z_pred)
+        self.sum_to_mean_pred(np.dot(K, np.expand_dims(z-z_pred, axis=1)))
+        self.cov_pred = np.dot(np.identity(len(np.dot(K, H))) - np.dot(K, H), self.cov_pred)
 
 
     def EKF(self, event):
 
         if event[0] == 'odo': # precisa de R e position_and_quaternions
-            self.update_robot_pos(event) 
-            print('mean_pred[0] odom')
-            print(self.mean_pred[0])
-       
+            self.update_robot_pos(event)
+
         elif event[0] == 'obs': # precisa de s_I_see, Q
             for z in event[1]: # z = [x y s].T
-                print('mean_pred[0] obs')
-                print(self.mean_pred[0])
                 j = self.search_for_landmark(z)
                 if j == 0:
                     self.add_unseen_landmark(z)
@@ -145,5 +136,4 @@ class SLAM(object):
                 self.update_seen_landmarks(j, z, event[2])
        
         elif event[0] == 'end':
-            print('mean_pred')
-            print(self.mean_pred)
+            pass
