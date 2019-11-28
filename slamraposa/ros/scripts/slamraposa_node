@@ -57,7 +57,7 @@ def main():
             for i in range(1, len(operation.mean_pred)):
                 plt.plot(operation.mean_pred[i][0],operation.mean_pred[i][1], 'r+')
             plt.draw()
-            plt.pause(0.00000000000000001)
+            plt.pause(0.0000000000000000000000000000000001)
 
             x.append(operation.mean_pred[0][0])
             y.append(operation.mean_pred[0][1])
