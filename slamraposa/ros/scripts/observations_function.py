@@ -1,5 +1,7 @@
 import rospy
 from visualization_msgs.msg import MarkerArray
+import Queue
+
 
 class ObsInterp(object):
 
@@ -10,7 +12,8 @@ class ObsInterp(object):
         '''
 
         rospy.loginfo('Observations Interpreter Started')
-        # subscribe to RaposaNG ARUCO topic
+        # subscribe to RaposaNG ARUCO topic: /aruco_marker_publisher/markers
+        # fake_world topic: fake_obs
         self.subs = rospy.Subscriber("fake_obs", MarkerArray, self.ARUCOCallback)
         # define member variable and initialize with a big value
         # it will store the distance from the robot to the walls

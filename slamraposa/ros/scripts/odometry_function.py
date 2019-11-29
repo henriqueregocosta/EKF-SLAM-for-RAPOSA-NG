@@ -2,6 +2,8 @@ import rospy
 import math
 from nav_msgs.msg import Odometry
 import tf
+import Queue
+
 
 class OdoInterp(object):
 
@@ -13,6 +15,7 @@ class OdoInterp(object):
 
         rospy.loginfo('Odometry Interpreter Started')
         # subscribe to RaposaNG ARUCO topic
+        # raposa topic: /raposang/odometry fake_world topic: fake_odom
         self.subs = rospy.Subscriber("fake_odom", Odometry, self.ARUCOCallback)
         # define member variable and initialize with a big value
         # it will store the distance from the robot to the walls

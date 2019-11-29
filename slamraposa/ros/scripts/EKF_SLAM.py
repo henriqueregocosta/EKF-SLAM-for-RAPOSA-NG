@@ -123,7 +123,7 @@ class SLAM(object):
 
 
     def EKF(self, event):
-
+        print(event)
         if event[0] == 'odo': # precisa de R e position_and_quaternions
             self.update_robot_pos(event)
 
@@ -135,7 +135,5 @@ class SLAM(object):
                     j = len(self.mean_pred) - 1
                 self.update_seen_landmarks(j, z, event[2])
        
-        elif event[0] == 'end':
-            pass
         elif event[0] == 'kill':
             pass

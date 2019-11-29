@@ -4,24 +4,28 @@ import matplotlib.pyplot as plt
 import numpy as np
 import Queue
 import rospy
-import thread
-
+# import thread
 
 import EKF_SLAM
 import observations_function as obs
 import odometry_function as odo
+import kill_function as kill
 import slamraposa_ros.slamraposa_node
 
 
-def check_for_shutdown(queue, observations, odometry):
-    while observations.subs.get_num_connections() and odometry.subs.get_num_connections():
-        pass
-    queue.put(['end'])
+# def check_for_shutdown(queue, observations, odometry):
+#     killer = rospy.Subscriber("killmessage", String, Kill(queue))
+#     print('hey')
 
+
+# def Kill(queue):
+#     print('oi?')
+#     queue.put(['end'])
 
 def update_noises(observations, odometry, Q, R):
     observations.Q = Q
     odometry.R = R
+
 
 def main():
     rospy.init_node('slamraposa', anonymous=False)
@@ -34,46 +38,39 @@ def main():
 
     observations = obs.ObsInterp(q, Q)
     odometry = odo.OdoInterp(q, R)
+    end = kill.KillInterp(q)
 
     # to plot the results
     x=[]
     y=[]
 
-    plt.ylim((-9,9))
-    plt.xlim((-9,9))
-
+    plt.ylim((-10,10))
+    plt.xlim((-10,10))
+    j=0
     first = 1
-    while not rospy.is_shutdown():
+    while 1:
+        if first:
+            first = 0
 
-        if observations.subs.get_num_connections() and odometry.subs.get_num_connections():
-            if first:
-                thread.start_new_thread(check_for_shutdown, (q, observations, odometry))
-                first = 0
-            
-            # Plot
-            plt.plot(operation.mean_pred[0][0], operation.mean_pred[0][1], 'bo')
+        x.append(operation.mean_pred[0][0])
+        y.append(operation.mean_pred[0][1])
+
+        update_noises(observations, odometry, Q, R)
+        
+        event = q.get()     # event = ['obs', markers_I_see, Q]              
+                            # or event = ['odo', position_and_quaternions, R]
+        operation.EKF(event)
+        j+=1
+        q.task_done() 
+
+        if event[0] == 'kill':
             for i in range(1, len(operation.mean_pred)):
                 plt.plot(operation.mean_pred[i][0],operation.mean_pred[i][1], 'r+')
-            plt.draw()
-            plt.pause(0.00000000000000001)
-            x.append(operation.mean_pred[0][0])
-            y.append(operation.mean_pred[0][1])
-
-            update_noises(observations, odometry, Q, R)
-
-            event = q.get()     # event = ['obs', markers_I_see, Q]              
-                                # or event = ['odo', position_and_quaternions, R]
-
-            operation.EKF(event)
-            q.task_done() 
-
-        elif not first:
+                plt.plot(x, y, '-b')
+                plt.title('EKF-SLAM result')
+                plt.show()
             break
-
-    # plot
-
-    plt.plot(x, y, '-b')
-    plt.show()
+        
 
 if __name__ == '__main__':
     main()

@@ -1,0 +1,23 @@
+#!/usr/bin/env python
+
+import endekf_ros.endekf_node
+from std_msgs.msg import String
+import rospy
+
+class endekf(object):
+    def __init__(self):
+            # register node in ROS network
+            rospy.init_node('endekf', anonymous=False)
+            # print message in terminal
+            rospy.loginfo('endekf online')
+
+def main():
+
+    while(not rospy.is_shutdown()):
+        endekf1 = endekf()
+        killer = rospy.Publisher('killmessage', String, queue_size=10)
+        killer.publish('kill')
+
+
+if __name__ == '__main__':
+    main()
