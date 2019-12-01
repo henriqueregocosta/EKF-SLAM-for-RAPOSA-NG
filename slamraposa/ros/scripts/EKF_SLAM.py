@@ -1,5 +1,6 @@
 import math
 import numpy as np
+import rospy
 from numpy.linalg import multi_dot
 
 
@@ -8,8 +9,8 @@ class SLAM(object):
     def __init__(self, queue_name):
         self.mean_pred = [[0, 0, 0]]
         self.cov_pred = np.zeros((3,3))
-        self.landmarks_index = {}
 
+        self.landmarks_index = {}
 
     def sum_to_mean_pred(self, array):
         for i in range(len(self.mean_pred)):
@@ -126,6 +127,7 @@ class SLAM(object):
 
         if event[0] == 'odo': # precisa de R e position_and_quaternions
             self.update_robot_pos(event)
+            return False
 
         elif event[0] == 'obs': # precisa de s_I_see, Q
             for z in event[1]: # z = [x y s].T
@@ -134,8 +136,7 @@ class SLAM(object):
                     self.add_unseen_landmark(z)
                     j = len(self.mean_pred) - 1
                 self.update_seen_landmarks(j, z, event[2])
-       
+            return False
+
         elif event[0] == 'end':
-            pass
-        elif event[0] == 'kill':
-            pass
+            return True
