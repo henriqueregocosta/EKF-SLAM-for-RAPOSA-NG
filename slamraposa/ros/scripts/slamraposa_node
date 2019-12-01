@@ -6,22 +6,19 @@ import Queue
 import rospy
 import thread
 
-
 import EKF_SLAM
 import observations_function as obs
 import odometry_function as odo
 import slamraposa_ros.slamraposa_node
 
 
-def check_for_shutdown(queue, observations, odometry):
-    while observations.subs.get_num_connections() and odometry.subs.get_num_connections():
-        pass
-    queue.put(['end'])
+
 
 
 def update_noises(observations, odometry, Q, R):
     observations.Q = Q
     odometry.R = R
+
 
 def main():
     rospy.init_node('slamraposa', anonymous=False)
@@ -29,6 +26,8 @@ def main():
     q = Queue.Queue()
     Q = np.identity(3)
     R = np.identity(3)
+
+    print('1')
 
     operation = EKF_SLAM.SLAM(q)
 
@@ -42,13 +41,16 @@ def main():
     plt.ylim((-10,10))
     plt.xlim((-10,10))
     j=0
-    first = 1
+    first = q.get()
+
+    print(first)
+
+
     while not rospy.is_shutdown():
 
         if observations.subs.get_num_connections() and odometry.subs.get_num_connections():
-            if first:
-                thread.start_new_thread(check_for_shutdown, (q, observations, odometry))
-                first = 0
+            
+            print('while slamraposa')
 
             x.append(operation.mean_pred[0][0])
             y.append(operation.mean_pred[0][1])
@@ -62,16 +64,25 @@ def main():
             j+=1
             q.task_done() 
 
+            print(event[0])
+
+            if event[0] == 'end':
+                for i in range(1, len(operation.mean_pred)):
+                    print('inside end if')
+                    plt.plot(operation.mean_pred[i][0],operation.mean_pred[i][1], 'r+')
+                    plt.plot(x, y, '-b')
+                    plt.title('EKF-SLAM result')
+                    plt.show()
+                return
+
         elif not first:
             break
 
+        
+
     # plot
 
-    for i in range(1, len(operation.mean_pred)):
-                plt.plot(operation.mean_pred[i][0],operation.mean_pred[i][1], 'r+')
-    plt.plot(x, y, '-b')
-    plt.title('EKF-SLAM result')
-    plt.show()
+
 
 if __name__ == '__main__':
     main()

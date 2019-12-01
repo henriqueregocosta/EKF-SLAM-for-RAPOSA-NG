@@ -29,9 +29,10 @@ class fake_world(object):
         plt.xlim((-10,10))
         plt.ylim((-10,10))
 
-        rate = rospy.Rate(1000) # T=0.01s
 
-        #while not rospy.is_shutdown() and :
+        rate = rospy.Rate(50) # T=0.01s
+
+        # not rospy.is_shutdown() and :
         xx=[]
         yy=[]
         for j,robot.pose in enumerate(self.trajectory):
