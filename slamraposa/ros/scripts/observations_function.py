@@ -8,12 +8,10 @@ class ObsInterp(object):
         Class constructor: will get executed at the moment
         of object creation
         '''
-        print('just before odo subscriber initialization')
         rospy.loginfo('Observations Interpreter Started')
         # subscribe to RaposaNG ARUCO topic: /aruco_marker_publisher/markers
         # fake_world topic: fake_obs
         self.subs = rospy.Subscriber("fake_obs", MarkerArray, self.ARUCOCallback)
-        print('just after odo subscriber initialization')
         # define member variable and initialize with a big value
         # it will store the distance from the robot to the walls
 
@@ -26,7 +24,6 @@ class ObsInterp(object):
         This function gets executed everytime a ARUCO Marker msg is received on the
         topic: /fake_obs
         '''
-        print('ARUCOCallback')
         markers_I_see = []
         N = len(msg.markers)
 
@@ -37,5 +34,5 @@ class ObsInterp(object):
             update = [ox, oy, oid]
 
             markers_I_see.append(update) # the marker is added to the vector
-            
+        
         self.q.put(['obs', markers_I_see, self.Q])

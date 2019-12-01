@@ -1,7 +1,6 @@
 import math
 import numpy as np
 import rospy
-from std_msgs.msg import String
 from numpy.linalg import multi_dot
 
 
@@ -10,10 +9,8 @@ class SLAM(object):
     def __init__(self, queue_name):
         self.mean_pred = [[0, 0, 0]]
         self.cov_pred = np.zeros((3,3))
-        print('just before subscriber initialization')
-        self.killer = rospy.Subscriber("killmessage", String, self.Kill(queue_name))
-        print('subscriber on')
 
+        self.landmarks_index = {}
 
     def sum_to_mean_pred(self, array):
         for i in range(len(self.mean_pred)):
@@ -46,13 +43,11 @@ class SLAM(object):
 
 
     def search_for_landmark(self, z):
-        N = len(self.mean_pred) - 1
-        j = 0
-        if N>0: # check if the observation corresponds to a already seen landmark
-            for i in range(N):
-                if(z[2]==self.mean_pred[i+1][2]):
-                    j = i+1
-        return j
+        if z[2] in self.landmarks_index:
+            return self.landmarks_index[z[2]]
+        else:
+            return 0
+
 
 
     def add_unseen_landmark(self, z):
@@ -62,7 +57,8 @@ class SLAM(object):
         update[0] = self.mean_pred[0][0] + z[0]*math.cos(theta) - z[1]*math.sin(theta)
         update[1] = self.mean_pred[0][1] + z[0]*math.sin(theta) + z[1]*math.cos(theta)
         update[2] = z[2]
-        
+
+        self.landmarks_index[z[2]] = len(self.mean_pred)
         self.mean_pred.append(list(update))
         self.cov_pred = np.bmat([[self.cov_pred, np.zeros((len(self.cov_pred),3))],
                                     [np.zeros((3,len(self.cov_pred))), np.identity(3)]]).A
@@ -131,6 +127,7 @@ class SLAM(object):
 
         if event[0] == 'odo': # precisa de R e position_and_quaternions
             self.update_robot_pos(event)
+            return False
 
         elif event[0] == 'obs': # precisa de s_I_see, Q
             for z in event[1]: # z = [x y s].T
@@ -139,10 +136,7 @@ class SLAM(object):
                     self.add_unseen_landmark(z)
                     j = len(self.mean_pred) - 1
                 self.update_seen_landmarks(j, z, event[2])
-       
-        elif event[0] == 'end':
-            pass
+            return False
 
-    def Kill(self, queue):
-        print('inside kill callback function')
-        queue.put(['end'])
+        elif event[0] == 'end':
+            return True

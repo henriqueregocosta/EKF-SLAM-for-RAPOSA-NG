@@ -29,33 +29,25 @@ class fake_world(object):
         plt.xlim((-10,10))
         plt.ylim((-10,10))
 
-
-        rate = rospy.Rate(50) # T=0.01s
+        freq = 50
+        rate = rospy.Rate(freq)
 
         # not rospy.is_shutdown() and :
-        xx=[]
-        yy=[]
         for j,robot.pose in enumerate(self.trajectory):
-            if not rospy.is_shutdown():
-                # robot.pose = self.trajectory[j-1]
-                robot.compute_movement(self.trajectory, j)
-                # every x movements, provide observation
-                if j%4 == 0:
-                    robot.now = rospy.Time.now()
-                    robot.compute_observation(self.landmarks, j)
-                
-                # plotting the poses
-                # plt.plot(robot.pose[0], robot.pose[1], 'b*')
 
-                # # update plot
-                # plt.draw()
-                # pause = 1/200000000000
-                # plt.pause(pause)
+            if not rospy.is_shutdown():
+                robot.compute_movement(self.trajectory, j)
+
+                # every x movements, provide observation
+                if j%4 == 0 and j != 0:
+                    rospy.sleep(10.0/freq)        # sleeps for 25/freq seconds
+                    robot.compute_observation(self.landmarks, j)
 
                 rate.sleep()
 
-        # plot
-
+        # display the simulation data
+        xx=[]
+        yy=[]
         for i in range(0, len(self.trajectory)):
             xx.append(self.trajectory[i][0])
             yy.append(self.trajectory[i][1])
@@ -108,12 +100,6 @@ class robot(object):
             if self.is_in_line_of_sight(z):
                 observation.append(z)
 
-        # plotting the landmarks
-        # for i in range(len(landmarks)):
-        #     for k in range(len(observation)):
-        #         if landmarks[i][2]==observation[k][2]:
-        #             plt.plot(landmarks[i][0], landmarks[i][1], 'r+')
-
         self.translate_obs(observation, j)
 
     def is_in_line_of_sight(self, z):
@@ -148,7 +134,7 @@ class robot(object):
         # creates empty MarkerArray message
         markerArray=MarkerArray()
 
-        robot.now = rospy.Time.now()
+        now = rospy.Time.now()
 
         for i in range(len(obs)):
 
@@ -157,8 +143,8 @@ class robot(object):
             # header
             marker.header.frame_id = "/base_link"
             marker.type = marker.SPHERE
-            marker.header.stamp.nsecs = self.now.nsecs
-            marker.header.stamp.secs = self.now.secs
+            marker.header.stamp.nsecs = now.nsecs
+            marker.header.stamp.secs = now.secs
             # observation
             marker.pose.position.x = obs[i][0]
             marker.pose.position.y = obs[i][1]
@@ -176,13 +162,12 @@ class robot(object):
         # given the trajectory and the current iteration
         # computes the movement vector
         # ------------------------
-        if j>0:
-            movement = np.zeros(3)
-            movement[0] = trajectory[j][0]
-            movement[1] = trajectory[j][1]
-            movement[2] = trajectory[j][2]
+        movement = np.zeros(3)
+        movement[0] = trajectory[j][0]
+        movement[1] = trajectory[j][1]
+        movement[2] = trajectory[j][2]
 
-            self.translate_odom(movement,j)
+        self.translate_odom(movement,j)
 
     def translate_odom(self, movement,i):
         # --------------------------------------
@@ -191,11 +176,11 @@ class robot(object):
         # creates empty pose message
         odom_msg=Odometry()
 
-        robot.now = rospy.Time.now()
+        now = rospy.Time.now()
 
         # header
-        odom_msg.header.stamp.nsecs = self.now.nsecs
-        odom_msg.header.stamp.secs = self.now.secs
+        odom_msg.header.stamp.nsecs = now.nsecs
+        odom_msg.header.stamp.secs = now.secs
 
         # odom
         odom_msg.pose.pose.position.x = movement[0]
@@ -245,6 +230,20 @@ def createworld(worldtype):
         landmarks.extend(finite_wall(2.5, 2.5, 5, 0, 1, 'x'))
         landmarks.extend(finite_wall(-2, 3, 10, 0, 1, 'x'))
         landmarks.extend(finite_wall(3, -2, 15, 1, 1, 'x'))
+
+    elif worldtype == 'world4':
+        trajectory = straightline(0,0,0,0.1,12*5,'x')
+        trajectory.extend(straightline(6, -0.5, -math.pi/2, -0.1, 8*5, 'y'))
+        trajectory.extend(straightline(6, -5, math.pi, -0.1, 12*5, 'x'))
+        trajectory.extend(straightline(0, -5, math.pi/2, 0.1, 9*5, 'y'))
+        landmarks = finite_wall(-1, 1, 0, 2, 4, 'x')
+        landmarks.extend(finite_wall(1, -1, 30, 1, 4, 'x'))
+        landmarks.extend(finite_wall(1, -4, 50, 1, 4, 'x'))
+        landmarks.extend(finite_wall(-1, -6, 70, 2, 4, 'x'))
+        landmarks.extend(finite_wall(7, 0, 90, 2, -3, 'y'))
+        landmarks.extend(finite_wall(-1, 0, 110, 2, -3, 'y'))
+        landmarks.extend(finite_wall(1, -2, 130, 2, -1, 'y'))
+        landmarks.extend(finite_wall(5, -2, 140, 2, -1, 'y'))
 
     return landmarks, trajectory
 

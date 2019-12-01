@@ -10,10 +10,7 @@ import EKF_SLAM
 import observations_function as obs
 import odometry_function as odo
 import slamraposa_ros.slamraposa_node
-
-
-
-
+import EKFstopper
 
 def update_noises(observations, odometry, Q, R):
     observations.Q = Q
@@ -27,12 +24,11 @@ def main():
     Q = np.identity(3)
     R = np.identity(3)
 
-    print('1')
-
     operation = EKF_SLAM.SLAM(q)
 
     observations = obs.ObsInterp(q, Q)
     odometry = odo.OdoInterp(q, R)
+    EKFstopper.shutdown(q)
 
     # to plot the results
     x=[]
@@ -40,49 +36,35 @@ def main():
 
     plt.ylim((-10,10))
     plt.xlim((-10,10))
+
     j=0
-    first = q.get()
+    shutdown = False;
 
-    print(first)
-
-
-    while not rospy.is_shutdown():
-
-        if observations.subs.get_num_connections() and odometry.subs.get_num_connections():
+    while not rospy.is_shutdown() and not shutdown:
             
-            print('while slamraposa')
+        x.append(operation.mean_pred[0][0])
+        y.append(operation.mean_pred[0][1])
 
-            x.append(operation.mean_pred[0][0])
-            y.append(operation.mean_pred[0][1])
+        update_noises(observations, odometry, Q, R)
 
-            update_noises(observations, odometry, Q, R)
+        event = q.get()     # event = ['obs', markers_I_see, Q]              
+                            # or event = ['odo', position_and_quaternions, R]
+                            # or event = ['end', string, 0]
+                 
+        shutdown = operation.EKF(event)
+        j+=1
+        q.task_done() 
 
-            event = q.get()     # event = ['obs', markers_I_see, Q]              
-            # or event = ['odo', position_and_quaternions, R]
+    # display the trajectory and final landmark estimation
 
-            operation.EKF(event)
-            j+=1
-            q.task_done() 
-
-            print(event[0])
-
-            if event[0] == 'end':
-                for i in range(1, len(operation.mean_pred)):
-                    print('inside end if')
-                    plt.plot(operation.mean_pred[i][0],operation.mean_pred[i][1], 'r+')
-                    plt.plot(x, y, '-b')
-                    plt.title('EKF-SLAM result')
-                    plt.show()
-                return
-
-        elif not first:
-            break
-
+    for i in range(1, len(operation.mean_pred)):
+        plt.plot(operation.mean_pred[i][0],operation.mean_pred[i][1], 'r+')
         
+    plt.plot(x, y, '-b')
+    plt.title('EKF-SLAM result')
+    plt.show()
 
-    # plot
-
-
+    return
 
 if __name__ == '__main__':
     main()
