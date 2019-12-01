@@ -5,7 +5,6 @@ import numpy as np
 import Queue
 import rospy
 import thread
-from std_msgs.msg import String
 
 import EKF_SLAM
 import observations_function as obs
@@ -13,14 +12,8 @@ import odometry_function as odo
 import slamraposa_ros.slamraposa_node
 
 
-def check_for_shutdown(queue, observations, odometry):
-    killer = rospy.Subscriber("killmessage", String, Kill(queue))
-    print('hey')
 
 
-def Kill(queue):
-    print('oi?')
-    queue.put(['end'])
 
 def update_noises(observations, odometry, Q, R):
     observations.Q = Q
@@ -34,6 +27,8 @@ def main():
     Q = np.identity(3)
     R = np.identity(3)
 
+    print('1')
+
     operation = EKF_SLAM.SLAM(q)
 
     observations = obs.ObsInterp(q, Q)
@@ -46,16 +41,16 @@ def main():
     plt.ylim((-10,10))
     plt.xlim((-10,10))
     j=0
-    first = 1
+    first = q.get()
+
+    print(first)
 
 
     while not rospy.is_shutdown():
 
         if observations.subs.get_num_connections() and odometry.subs.get_num_connections():
-            print('aqui')
-            if first:
-                thread.start_new_thread(check_for_shutdown, (q, observations, odometry))
-                first = 0
+            
+            print('while slamraposa')
 
             x.append(operation.mean_pred[0][0])
             y.append(operation.mean_pred[0][1])
@@ -73,6 +68,7 @@ def main():
 
             if event[0] == 'end':
                 for i in range(1, len(operation.mean_pred)):
+                    print('inside end if')
                     plt.plot(operation.mean_pred[i][0],operation.mean_pred[i][1], 'r+')
                     plt.plot(x, y, '-b')
                     plt.title('EKF-SLAM result')

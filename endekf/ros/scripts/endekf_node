@@ -14,10 +14,13 @@ def main():
 
     init()
 
+    rate = rospy.Rate(1)
     while(not rospy.is_shutdown()):
 
-        killer = rospy.Publisher('killmessage', String, queue_size=10)
+        killer = rospy.Publisher('killmessage', String, queue_size=1)
         killer.publish('kill')
+
+        rate.sleep()
 
 
 

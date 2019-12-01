@@ -1,5 +1,7 @@
 import math
 import numpy as np
+import rospy
+from std_msgs.msg import String
 from numpy.linalg import multi_dot
 
 
@@ -8,6 +10,9 @@ class SLAM(object):
     def __init__(self, queue_name):
         self.mean_pred = [[0, 0, 0]]
         self.cov_pred = np.zeros((3,3))
+        print('just before subscriber initialization')
+        self.killer = rospy.Subscriber("killmessage", String, self.Kill(queue_name))
+        print('subscriber on')
 
 
     def sum_to_mean_pred(self, array):
@@ -137,3 +142,7 @@ class SLAM(object):
        
         elif event[0] == 'end':
             pass
+
+    def Kill(self, queue):
+        print('inside kill callback function')
+        queue.put(['end'])
