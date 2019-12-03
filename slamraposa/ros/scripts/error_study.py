@@ -30,7 +30,6 @@ def check_consistency(x, y, theta, t_mean_pred, cov_pred):
     # print(chi_sq)
 
 
-
 def straightline(x, y, theta, step, n, direction):
     # -------------
     # x, y, theta first points
@@ -70,7 +69,7 @@ def EKFconsistency(x, y, theta, cov, trajectory):
     trajectory = np.asarray(x)
 
     x_estimated = np.hstack((x, y, theta))
-    x_true = np.asarray(trajectory)
+    x_true = np.asarray(trajectory[1:])
     cov = np.asarray(cov)
 
     dx = x_true-x_estimated

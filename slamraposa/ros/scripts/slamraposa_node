@@ -51,6 +51,8 @@ def main():
     trajectory.extend(error_study.straightline(-50, 0, 0, 1, 49, 'x'))
     
     while not rospy.is_shutdown() and not shutdown:
+        a = [0, 1, 2, 3]
+        print(a[1:])
         x.append(operation.mean_pred[0][0])
         y.append(operation.mean_pred[0][1])
         theta.append(operation.mean_pred[0][2])
@@ -84,6 +86,7 @@ def main():
     error_study.EKFconsistency(x, y, theta, pose_cov, true_pose)
 
     return
+
 
 if __name__ == '__main__':
     main()
