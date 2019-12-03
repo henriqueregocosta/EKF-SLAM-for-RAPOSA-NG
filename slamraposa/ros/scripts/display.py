@@ -26,8 +26,6 @@ def landmarks_and_path(x,y, mean_pred, cov, plot_type):
             a=math.sqrt(last_cov[i][i])                #radius on the x-axis
             b=math.sqrt(last_cov[i+1][i+1])            #radius on the y-axis
             t_rot=0                         #rotation angle
-            print(a)
-            print(b)
 
             t = np.linspace(0, 2*pi, 100)
             Ell = np.array([a*np.cos(t) , b*np.sin(t)])  
@@ -42,4 +40,17 @@ def landmarks_and_path(x,y, mean_pred, cov, plot_type):
             plt.plot( u+Ell_rot[0,:] , v+Ell_rot[1,:],'aqua' )    #rotated ellipse
     
     plt.grid(color='lightgray',linestyle='--')
+    plt.show()
+
+    return
+
+def cov_time(pose_cov):
+    
+    pose_cov = np.asarray(pose_cov)
+    print(pose_cov)
+    k = np.arange(0,len(pose_cov))
+    print(k)
+    print(pose_cov[:,0])
+
+    plt.plot(k, pose_cov[:,0])
     plt.show()

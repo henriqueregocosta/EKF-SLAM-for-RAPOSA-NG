@@ -65,7 +65,9 @@ class fake_world(object):
         plt.title('Synthetic data')
         plt.xlabel('x')
         plt.ylabel('y')
-        plt.show()    
+        plt.show()   
+        
+        return 
 
 class robot(object):
     # ----------------
@@ -368,7 +370,7 @@ def circle(n):
 def main():
     fake_world1=fake_world()
     robot1=robot()
-    fake_world1.run_sim('world6', robot1)
+    fake_world1.run_sim('world5', robot1)
 
 if __name__ == '__main__':
     main()

@@ -35,14 +35,16 @@ def main():
     # to plot the results
     x=[]
     y=[]
+    pose_cov=[]
 
     j=0
-    shutdown = False;
+    shutdown = False
 
     while not rospy.is_shutdown() and not shutdown:
             
         x.append(operation.mean_pred[0][0])
         y.append(operation.mean_pred[0][1])
+        pose_cov.append([operation.cov_pred[0,0], operation.cov_pred[0,1], operation.cov_pred[0,2]])
 
         update_noises(observations, odometry, Q, R)
 
@@ -52,12 +54,13 @@ def main():
                  
         shutdown = operation.EKF(event)
         j+=1
-        q.task_done() 
+        q.task_done()
                 
     # display the trajectory and final landmark estimation
 
     rospy.loginfo('Terminating EKF-SLAM, wait for the plot')
     display.landmarks_and_path(x, y, operation.mean_pred, operation.cov_pred, 'include uncertainty')
+    display.cov_time(pose_cov)
     # error_study.EKFconsistency(operation.mean_pred, operation.cov_pred)
 
     return
