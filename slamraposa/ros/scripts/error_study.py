@@ -69,13 +69,13 @@ def EKFconsistency(x, y, theta, cov, trajectory):
     trajectory = np.asarray(x)
 
     x_estimated = np.hstack((x, y, theta))
-    x_true = np.asarray(trajectory[1:])
+    x_true = np.asarray(trajectory)
     cov = np.asarray(cov)
 
     dx = x_true-x_estimated
 
     D2 = []
-    for dx_t,cov_t in zip(dx,cov):
+    for dx_t,cov_t in zip(dx[1:],cov[1:]):
         invcov = inv(cov_t)
         D2.append(multi_dot([dx_t.T,invcov,dx_t]))
 
