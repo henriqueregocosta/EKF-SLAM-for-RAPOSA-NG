@@ -9,7 +9,7 @@ class ObsInterp(object):
         of object creation
         '''
         rospy.loginfo('Observations Interpreter Started')
-        # subscribe to RaposaNG ARUCO topic: /aruco_marker_publisher/markers
+        # subscribe to RaposaNG ARUCO topic: aruco_marker_publisher/markers
         # fake_world topic: fake_obs
         self.subs = rospy.Subscriber("fake_obs", MarkerArray, self.ARUCOCallback)
         # define member variable and initialize with a big value

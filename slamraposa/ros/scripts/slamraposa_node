@@ -5,6 +5,8 @@ import numpy as np
 import Queue
 import rospy
 import thread
+import display
+import error_study
 
 import EKF_SLAM
 import observations_function as obs
@@ -33,8 +35,6 @@ def main():
     # to plot the results
     x=[]
     y=[]
-    plt.ylim((-10,10))
-    plt.xlim((-10,10))
 
     j=0
     shutdown = False;
@@ -56,12 +56,9 @@ def main():
                 
     # display the trajectory and final landmark estimation
 
-    for i in range(1, len(operation.mean_pred)):
-        plt.plot(operation.mean_pred[i][0],operation.mean_pred[i][1], 'r+')
-        
-    plt.plot(x, y, '-b')
-    plt.title('EKF-SLAM result')
-    plt.show()
+    rospy.loginfo('Terminating EKF-SLAM, wait for the plot')
+    display.landmarks_and_path(x, y, operation.mean_pred, operation.cov_pred, 'include uncertainty')
+    # error_study.EKFconsistency(operation.mean_pred, operation.cov_pred)
 
     return
 
