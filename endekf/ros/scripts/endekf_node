@@ -4,20 +4,26 @@ import endekf_ros.endekf_node
 from std_msgs.msg import String
 import rospy
 
-class endekf(object):
-    def __init__(self):
+def init():
             # register node in ROS network
             rospy.init_node('endekf', anonymous=False)
             # print message in terminal
             rospy.loginfo('endekf online')
 
 def main():
+    init()
 
-    while(not rospy.is_shutdown()):
-        endekf1 = endekf()
-        killer = rospy.Publisher('killmessage', String, queue_size=10)
+    rate = rospy.Rate(1)
+    j=0;
+    while(not rospy.is_shutdown() and j<2):
+
+        killer = rospy.Publisher('killmessage', String, queue_size=1)
         killer.publish('kill')
 
+        rate.sleep()
+        j+=1
 
+    return
+    
 if __name__ == '__main__':
     main()

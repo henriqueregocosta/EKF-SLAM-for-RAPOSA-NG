@@ -5,6 +5,7 @@ import rospy
 import math
 import numpy as np
 import tf
+import random
 import matplotlib.pyplot as plt
 
 from geometry_msgs.msg import PoseStamped
@@ -20,50 +21,53 @@ class fake_world(object):
         # print message in terminal
         rospy.loginfo('fake_world online')
 
+        self.sim_type = 'noisy'
+
+        if self.sim_type == 'noisy':
+            rospy.loginfo('This is a noisy simulation')
+
 
     def run_sim(self, world_type, robot):
         # world creation
         self.landmarks, self.trajectory = createworld(world_type)
 
         # for the plot, adjust accordingly to world_type
-        plt.xlim((-10,10))
-        plt.ylim((-10,10))
+        plt.xlim((-60,60))
+        plt.ylim((-60,60))
 
-        rate = rospy.Rate(50) # T=0.01s
+        freq = 50
+        rate = rospy.Rate(freq)
 
         # not rospy.is_shutdown() and :
-        xx=[]
-        yy=[]
         for j,robot.pose in enumerate(self.trajectory):
-            if not rospy.is_shutdown():
-                # robot.pose = self.trajectory[j-1]
-                robot.compute_movement(self.trajectory, j)
-                # every x movements, provide observation
-                if j%4 == 0:
-                    robot.now = rospy.Time.now()
-                    robot.compute_observation(self.landmarks, j)
-                
-                # plotting the poses
-                # plt.plot(robot.pose[0], robot.pose[1], 'b*')
 
-                # # update plot
-                # plt.draw()
-                # pause = 1/200000000000
-                # plt.pause(pause)
+            if not rospy.is_shutdown():
+                robot.compute_movement(self.trajectory, self.sim_type, j)
+
+                # every x movements, provide observation
+                if j%4 == 0 and j != 0:
+                    rospy.sleep(10.0/freq)        # sleeps for 25/freq seconds
+                    robot.compute_observation(self.landmarks, self.sim_type, j)
 
                 rate.sleep()
 
-        # plot
-
+        # display the simulation data
+        xx=[]
+        yy=[]
         for i in range(0, len(self.trajectory)):
             xx.append(self.trajectory[i][0])
             yy.append(self.trajectory[i][1])
         for i in range(0, len(self.landmarks)):
             plt.plot(self.landmarks[i][0], self.landmarks[i][1], 'r+')
 
+        plt.grid(color='lightgray',linestyle='--')
         plt.plot(xx, yy, '-b')    
         plt.title('Synthetic data')
-        plt.show()    
+        plt.xlabel('x')
+        plt.ylabel('y')
+        plt.show()   
+        
+        return 
 
 class robot(object):
     # ----------------
@@ -78,7 +82,7 @@ class robot(object):
         self.odomPublisher = rospy.Publisher('fake_odom',Odometry,queue_size=100000)
         self.now = rospy.Time.now()
 
-    def compute_observation(self, landmarks, j):
+    def compute_observation(self, landmarks, sim_type, j):
         # ------------------------------
         # given landmark world coordinates,
         # computes the true pose of the landmark in
@@ -104,14 +108,16 @@ class robot(object):
             z[1] = -(x_lm - x_r)*math.sin(theta_r) + (y_lm - y_r)*math.cos(theta_r)
             z[2] = landmarks[i][2]
 
+            if sim_type == 'noisy':
+                # dist = math.sqrt(z[0]**2+z[1]**2)
+                # z[0]=z[0]+random.gauss(0,dist*0.05)
+                # z[1]=z[1]+random.gauss(0,dist*0.05)
+                z[0]=z[0]+random.gauss(0,0.05)
+                z[1]=z[1]+random.gauss(0,0.05)
+                z[2]=z[2]
+
             if self.is_in_line_of_sight(z):
                 observation.append(z)
-
-        # plotting the landmarks
-        # for i in range(len(landmarks)):
-        #     for k in range(len(observation)):
-        #         if landmarks[i][2]==observation[k][2]:
-        #             plt.plot(landmarks[i][0], landmarks[i][1], 'r+')
 
         self.translate_obs(observation, j)
 
@@ -128,7 +134,7 @@ class robot(object):
 
         dist = math.sqrt(x**2+y**2)
 
-        if x <= 0 or dist > 4:
+        if x <= 0 or dist > 15:
             return False
 
         obs_angle = math.atan2(y, x)
@@ -147,7 +153,7 @@ class robot(object):
         # creates empty MarkerArray message
         markerArray=MarkerArray()
 
-        robot.now = rospy.Time.now()
+        now = rospy.Time.now()
 
         for i in range(len(obs)):
 
@@ -156,8 +162,8 @@ class robot(object):
             # header
             marker.header.frame_id = "/base_link"
             marker.type = marker.SPHERE
-            marker.header.stamp.nsecs = self.now.nsecs
-            marker.header.stamp.secs = self.now.secs
+            marker.header.stamp.nsecs = now.nsecs
+            marker.header.stamp.secs = now.secs
             # observation
             marker.pose.position.x = obs[i][0]
             marker.pose.position.y = obs[i][1]
@@ -170,18 +176,22 @@ class robot(object):
         # publishes markerArray    
         self.obsPublisher.publish(markerArray)
 
-    def compute_movement(self, trajectory, j):
+    def compute_movement(self, trajectory, sim_type, j):
         # ------------------------
         # given the trajectory and the current iteration
         # computes the movement vector
         # ------------------------
-        if j>0:
-            movement = np.zeros(3)
-            movement[0] = trajectory[j][0]
-            movement[1] = trajectory[j][1]
-            movement[2] = trajectory[j][2]
+        movement = np.zeros(3)
+        movement[0] = trajectory[j][0]
+        movement[1] = trajectory[j][1]
+        movement[2] = trajectory[j][2]
 
-            self.translate_odom(movement,j)
+        if sim_type == 'noisy':
+            movement[0]=movement[0]+random.gauss(0,0.1)
+            movement[1]=movement[1]+random.gauss(0,0.1)
+            movement[2]=movement[2]+random.gauss(0,2*math.pi/180)
+
+        self.translate_odom(movement,j)
 
     def translate_odom(self, movement,i):
         # --------------------------------------
@@ -190,11 +200,11 @@ class robot(object):
         # creates empty pose message
         odom_msg=Odometry()
 
-        robot.now = rospy.Time.now()
+        now = rospy.Time.now()
 
         # header
-        odom_msg.header.stamp.nsecs = self.now.nsecs
-        odom_msg.header.stamp.secs = self.now.secs
+        odom_msg.header.stamp.nsecs = now.nsecs
+        odom_msg.header.stamp.secs = now.secs
 
         # odom
         odom_msg.pose.pose.position.x = movement[0]
@@ -245,7 +255,37 @@ def createworld(worldtype):
         landmarks.extend(finite_wall(-2, 3, 10, 0, 1, 'x'))
         landmarks.extend(finite_wall(3, -2, 15, 1, 1, 'x'))
 
+    elif worldtype == 'world4':
+        trajectory = straightline(0,0,0,0.1,12*5,'x')
+        trajectory.extend(straightline(6, -0.5, -math.pi/2, -0.1, 8*5, 'y'))
+        trajectory.extend(straightline(6, -5, math.pi, -0.1, 12*5, 'x'))
+        trajectory.extend(straightline(0, -5, math.pi/2, 0.1, 9*5, 'y'))
+        landmarks = finite_wall(-1, 1, 0, 2, 4, 'x')
+        landmarks.extend(finite_wall(1, -1, 30, 1, 4, 'x'))
+        landmarks.extend(finite_wall(1, -4, 50, 1, 4, 'x'))
+        landmarks.extend(finite_wall(-1, -6, 70, 1, 4, 'x'))
+        landmarks.extend(finite_wall(7, 0, 90, 2, -3, 'y'))
+        landmarks.extend(finite_wall(-1, 0, 110, 1, -3, 'y'))
+        landmarks.extend(finite_wall(1, -2, 130, 1, -1, 'y'))
+        landmarks.extend(finite_wall(5, -2, 140, 1, -1, 'y'))
 
+    elif worldtype == 'world5':
+        trajectory = straightline(0,0,0,1,50,'x')
+        trajectory.extend(straightline(50, -1, -math.pi/2, -1, 19, 'y'))
+        trajectory.extend(straightline(49, -20, math.pi, -1, 99, 'x'))
+        trajectory.extend(straightline(-50, -19, math.pi/2, 1, 19, 'y'))
+        trajectory.extend(straightline(-50, 0, 0, 1, 49, 'x'))
+        landmarks = finite_wall(-45, -10, 0, 5, 17, 'x')
+        landmarks.extend(finite_wall(-40, 10, 100, 3, 40, 'x'))
+        landmarks.extend(finite_wall(-40, -30, 200, 7, 25, 'x'))
+
+    elif worldtype == 'world6':
+        trajectory = circle(200)
+        landmarks = finite_wall(-5, -30, 0, 4, 15, 'y')
+        landmarks.extend(finite_wall(20, -40, 100, 7, 10, 'y'))
+        landmarks.extend(finite_wall(10, -10, 200, 2, 10, 'y'))
+        landmarks.extend(finite_wall(30, -10, 300, 2, 10, 'y'))
+        landmarks.extend(finite_wall(40, -40, 400, 4, 20, 'y'))
 
     return landmarks, trajectory
 
@@ -305,10 +345,32 @@ def straightline(x, y, theta, step, n, direction):
 
     return trajectory
 
+def circle(n):
+
+    trajectory=[[0, 0, 0]]
+    u = 20
+    v = 0
+    a = 20
+    b = 20
+
+    t = np.linspace(math.pi, -math.pi, n)
+    Ell = np.array([a*np.cos(t) , b*np.sin(t)])  
+
+    # plt.plot( u+Ell_rot[0,:] , v+Ell_rot[1,:],'aqua' )    #rotated ellipse
+
+    for i in range(n):
+        point=[0, 0, 0]
+        point[0]=u+Ell[0,i]
+        point[1]=v+Ell[1,i]
+        point[2]=i*2*math.pi/n
+        trajectory.append(point)
+
+    return trajectory
+
 def main():
     fake_world1=fake_world()
     robot1=robot()
-    fake_world1.run_sim('world3', robot1)
+    fake_world1.run_sim('world5', robot1)
 
 if __name__ == '__main__':
     main()
