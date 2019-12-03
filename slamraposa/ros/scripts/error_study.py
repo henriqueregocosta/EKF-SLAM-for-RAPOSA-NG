@@ -16,11 +16,8 @@ def check_consistency(e_mean_pred, t_mean_pred, cov_pred):
     dx = x_true-x_estimated
     invcov = inv(cov)
 
-    print('Maximum pose error')
-    print(np.amax(dx))
-
     # Normalized estimation error squared (NEES or D^2)
-    # D2 = np.dot(np.dot(dx, invcov),dx)
+    D2 = np.dot(np.dot(dx, invcov),dx)
     # print(D2)
 
     # chi-squared
@@ -30,6 +27,11 @@ def check_consistency(e_mean_pred, t_mean_pred, cov_pred):
 
 def EKFconsistency(e_mean_pred, cov):
 
-    t_mean_pred = np.asarray([-1.0000000000000009, -1.4101067586952727*10**-15, -8.086623206605827*10**-18, 23.0, -10.0, 4.0, 40.0, -10.0, 5.0, 40.0, 10.0, 102.0, 35.0, -30.0, 203.0, 10.0, -30.0, 202.0, 5.9999999999999991, -10.000000000000002, 3.0, -11.0, -10.000000000000002, 2.0, -15.0, -30.0, 201.0, -28.0, -10.000000000000002, 1.0, -40.0, -30.0, 200.0, -45.0, -10.000000000000002, 0.0, -40.0, 9.9999999999999982, 100.0, -3.6979673245513473*10**-16, 9.9999999999999982, 101.0])
-    check_consistency(e_mean_pred, t_mean_pred, cov)
+    trajectory = straightline(0,0,0,1,50,'x')
+    trajectory.extend(straightline(50, -1, -math.pi/2, -1, 19, 'y'))
+    trajectory.extend(straightline(49, -20, math.pi, -1, 99, 'x'))
+    trajectory.extend(straightline(-50, -19, math.pi/2, 1, 19, 'y'))
+    trajectory.extend(straightline(-50, 0, 0, 1, 49, 'x'))
+
+    check_consistency(e_mean_pred[:3], trajectory, cov)
     print('success')

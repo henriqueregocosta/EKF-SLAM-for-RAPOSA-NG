@@ -44,7 +44,7 @@ def main():
             
         x.append(operation.mean_pred[0][0])
         y.append(operation.mean_pred[0][1])
-        pose_cov.append([operation.cov_pred[0,0], operation.cov_pred[0,1], operation.cov_pred[0,2]])
+        pose_cov.append([operation.cov_pred[0,0], operation.cov_pred[1,1], operation.cov_pred[2,2]])
 
         update_noises(observations, odometry, Q, R)
 
