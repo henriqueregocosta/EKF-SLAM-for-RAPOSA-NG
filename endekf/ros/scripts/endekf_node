@@ -5,13 +5,12 @@ from std_msgs.msg import String
 import rospy
 
 def init():
-        # register node in ROS network
-        rospy.init_node('endekf', anonymous=False)
-        # print message in terminal
-        rospy.loginfo('endekf online')
+            # register node in ROS network
+            rospy.init_node('endekf', anonymous=False)
+            # print message in terminal
+            rospy.loginfo('endekf online')
 
 def main():
-
     init()
 
     rate = rospy.Rate(1)

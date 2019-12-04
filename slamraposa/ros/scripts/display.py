@@ -3,6 +3,7 @@ import numpy as np
 from math import pi, cos, sin
 import math
 
+
 def landmarks_and_path(x,y, mean_pred, cov, plot_type):
     plt.xlim((-60,60))
     plt.ylim((-60,60))
@@ -47,17 +48,19 @@ def landmarks_and_path(x,y, mean_pred, cov, plot_type):
 def cov_time(pose_cov):
     
     pose_cov = np.asarray(pose_cov)
-    print(pose_cov)
     k = np.arange(0,len(pose_cov))
-    print(k)
-    print(pose_cov[:,0])
 
-    plt.figure()
-    covxp = plt.plot(k, pose_cov[:,0], 'b', label='cov_x')
-    covyp = plt.plot(k, pose_cov[:,1], 'r', label='cov_y')
-    covheadingp = plt.plot(k, pose_cov[:,2], 'aqua', label='cov_heading')
-    plt.legend(loc="upper right")
-    plt.title('Pose covariance over time')
-    plt.xlabel('k (time step)')
-    plt.ylabel('cov(k)')
-    plt.show()
+    # plt.figure()
+    # covxp = plt.plot(k, pose_cov[:,0], 'b', label='cov_x')
+    # covyp = plt.plot(k, pose_cov[:,1], 'r', label='cov_y')
+    # covheadingp = plt.plot(k, pose_cov[:,2], 'aqua', label='cov_heading')
+    # plt.legend(loc="upper right")
+    # plt.title('Pose covariance over time')
+    # plt.xlabel('k (time step)')
+    # plt.ylabel('cov(k)')
+    # plt.show()
+
+    # plt.figure()
+    # plt.plot(k, pose_cov[:,0])
+    # plt.plot()
+    # plt.show()

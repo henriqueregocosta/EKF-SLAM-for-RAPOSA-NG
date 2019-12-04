@@ -1,5 +1,7 @@
 import rospy
 from visualization_msgs.msg import MarkerArray
+import Queue
+
 
 class ObsInterp(object):
 
