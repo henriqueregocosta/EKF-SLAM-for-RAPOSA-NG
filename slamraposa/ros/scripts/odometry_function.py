@@ -17,7 +17,7 @@ class OdoInterp(object):
         # subscribe to RaposaNG ARUCO topic
         # raposa topic: raposang/odometry_pose
         # fake_world topic: fake_odom
-        self.subs = rospy.Subscriber("fake_odom", Odometry, self.ODOCallback)
+        self.subs = rospy.Subscriber("raposang/odometry_pose", Odometry, self.ODOCallback)
         # define member variable and initialize with a big value
         # it will store the distance from the robot to the walls
         
@@ -38,8 +38,8 @@ class OdoInterp(object):
         qw = msg.pose.pose.orientation.w
         _,_,theta = tf.transformations.euler_from_quaternion((qx, qy, qz, qw))
 
-        self.q.put(['odo', self.odometry_model(posx, posy, theta), self.R])
-        self.last_odom = [posx, posy, theta]
+        self.q.put(['odo', self.odometry_model(posx, -posy, -theta), self.R, [posx, -posy, -theta]])
+        self.last_odom = [posx, -posy, -theta]
 
     def odometry_model(self, posx, posy, theta):
 

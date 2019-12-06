@@ -9,7 +9,7 @@ import display
 import error_study
 
 import EKF_SLAM
-import observations_function as obs
+import observations_function_new as obs
 import odometry_function as odo
 import kill_function as kill
 import slamraposa_ros.slamraposa_node
@@ -24,8 +24,8 @@ def main():
     rospy.init_node('slamraposa', anonymous=False)
 
     q = Queue.Queue()
-    Q = np.identity(3)
-    R = np.identity(3)
+    Q = 100*np.identity(3)
+    R = 100*np.identity(3)
 
     operation = EKF_SLAM.SLAM(q)
 
@@ -36,6 +36,9 @@ def main():
     # to plot the results
     x=[]
     y=[]
+    x_odo=[]
+    y_odo=[]
+    theta_odo=[]
     theta=[]
     pose_cov=[]
     true_pose=[]
@@ -58,7 +61,7 @@ def main():
         y.append(operation.mean_pred[0][1])
         theta.append(operation.mean_pred[0][2])
         pose_cov.append(operation.cov_pred[:3,:3])
-        true_pose.append(trajectory[trajectory_index])
+        # true_pose.append(trajectory[trajectory_index])
 
         update_noises(observations, odometry, Q, R)
 
@@ -67,18 +70,35 @@ def main():
                             # or event = ['end', string, 0]
         q.task_done()
 
-        if event[0] != 'end':
-            if event[0] == 'odo':
-                if first:
-                    trajectory_index += 1
-                first=True
-            elif event[0] == 'obs':
-                pass
+        if event[0] == 'odo':
+            x_odo.append(event[3][0])
+            y_odo.append(event[3][1])
+            theta_odo.append(event[3][2])
+
+        # if event[0] != 'end':
+        #     if event[0] == 'odo':
+        #         # if first:
+        #             # trajectory_index += 1
+        #         # first=True
+        #     elif event[0] == 'obs':
+        #         pass
 
         shutdown = operation.EKF(event)
         j+=1
                 
     # display the trajectory and final landmark estimation
+    k = np.arange(0,len(x_odo))
+    k1 = np.arange(0,len(x))
+
+    plt.plot(k, theta_odo, '-b')
+    plt.plot(k1, y, '-g')
+    plt.plot(k, y_odo, '-r')
+
+    # plt.plot(x_odo, y_odo, '-b')
+    plt.title('Odometry pose over time')
+    plt.xlabel('x')
+    plt.ylabel('y')
+    plt.show()
 
     rospy.loginfo('Terminating EKF-SLAM, wait for the plot')
     display.landmarks_and_path(x, y, operation.mean_pred, operation.cov_pred, 'include uncertainty')

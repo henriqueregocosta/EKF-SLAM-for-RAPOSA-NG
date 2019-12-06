@@ -1,4 +1,9 @@
-rosbag record /client_count /imu/data /joint_states /map /raposang/depth_cam/color/camera_info /raposang/depth_cam/color/image_raw /raposang/odometry_pose /raposang/odometry /tf /tf_static /aruco_marker_publisher /aruco_marker_publisher/markers
+rosbag record /client_count /imu/data /joint_states /map /raposang/depth_cam/color/camera_info /raposang/depth_cam/color/image_raw /raposang/odometry_pose /tf /tf_static /fiducial_images /fiducial_transforms
+
+
+
+
+/aruco_marker_publisher /aruco_marker_publisher/markers
 
 
 roscore
@@ -7,3 +12,8 @@ rosbag play --clock name.bag
 
 # optional
 /raposang/depth_cam/color/image_raw/compressed/parameter_descriptions /raposang/depth_cam/color/image_raw/compressed/parameter_updates
+
+
+skinny rosbag
+
+rosbag record /client_count /joint_states /map /raposang/odometry_pose /tf /tf_static /fiducial_transforms
