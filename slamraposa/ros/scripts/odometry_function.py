@@ -30,10 +30,7 @@ class OdoInterp(object):
         This function gets executed everytime a nav_msgs/Odometry msg is received on the
         topic: /fake_odom
         '''
-<<<<<<< HEAD
-        
-=======
->>>>>>> 22f60357a10e396a035ca18ac2ed295380a8f2a1
+
         posx = msg.pose.pose.position.x
         posy = msg.pose.pose.position.y
         qx = msg.pose.pose.orientation.x

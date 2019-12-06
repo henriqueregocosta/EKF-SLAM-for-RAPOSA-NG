@@ -1,9 +1,6 @@
 import math
 import numpy as np
-<<<<<<< HEAD
-=======
 import rospy
->>>>>>> 22f60357a10e396a035ca18ac2ed295380a8f2a1
 from numpy.linalg import multi_dot
 
 
@@ -13,10 +10,7 @@ class SLAM(object):
         self.mean_pred = [[0, 0, 0]]
         self.cov_pred = np.zeros((3,3))
         self.landmarks_index = {}
-<<<<<<< HEAD
 
-=======
->>>>>>> 22f60357a10e396a035ca18ac2ed295380a8f2a1
 
     def sum_to_mean_pred(self, array):
         for i in range(len(self.mean_pred)):
@@ -51,11 +45,7 @@ class SLAM(object):
             return self.landmarks_index[z[2]]
         else:
             return 0
-<<<<<<< HEAD
 
-
-=======
->>>>>>> 22f60357a10e396a035ca18ac2ed295380a8f2a1
 
     def add_unseen_landmark(self, z):
         theta = self.mean_pred[0][2]
@@ -126,10 +116,7 @@ class SLAM(object):
         self.cov_pred = np.dot(np.identity(len(np.dot(K, H))) - np.dot(K, H), self.cov_pred)
 
     def EKF(self, event):
-<<<<<<< HEAD
-        print(event)
-=======
->>>>>>> 22f60357a10e396a035ca18ac2ed295380a8f2a1
+
         if event[0] == 'odo': # precisa de R e position_and_quaternions
             self.update_robot_pos(event)
             return False
@@ -141,13 +128,8 @@ class SLAM(object):
                     self.add_unseen_landmark(z)
                     j = len(self.mean_pred) - 1
                 self.update_seen_landmarks(j, z, event[2])
-<<<<<<< HEAD
-       
-        elif event[0] == 'kill':
-            pass
-=======
+
             return False
 
         elif event[0] == 'end':
             return True
->>>>>>> 22f60357a10e396a035ca18ac2ed295380a8f2a1

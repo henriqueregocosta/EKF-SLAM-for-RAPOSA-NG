@@ -10,10 +10,7 @@ class ObsInterp(object):
         Class constructor: will get executed at the moment
         of object creation
         '''
-<<<<<<< HEAD
 
-=======
->>>>>>> 22f60357a10e396a035ca18ac2ed295380a8f2a1
         rospy.loginfo('Observations Interpreter Started')
         # subscribe to RaposaNG ARUCO topic: aruco_marker_publisher/markers
         # fake_world topic: fake_obs
