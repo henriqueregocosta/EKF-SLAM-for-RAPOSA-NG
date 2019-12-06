@@ -15,8 +15,9 @@ class OdoInterp(object):
 
         rospy.loginfo('Odometry Interpreter Started')
         # subscribe to RaposaNG ARUCO topic
-        # raposa topic: /raposang/odometry fake_world topic: fake_odom
-        self.subs = rospy.Subscriber("fake_odom", Odometry, self.ARUCOCallback)
+        # raposa topic: raposang/odometry_pose
+        # fake_world topic: fake_odom
+        self.subs = rospy.Subscriber("raposang/odometry_pose", Odometry, self.ODOCallback)
         # define member variable and initialize with a big value
         # it will store the distance from the robot to the walls
         
@@ -24,12 +25,15 @@ class OdoInterp(object):
         self.R = R
         self.last_odom = [0,0,0]
     
-    def ARUCOCallback(self, msg):
+    def ODOCallback(self, msg):
         '''
         This function gets executed everytime a nav_msgs/Odometry msg is received on the
         topic: /fake_odom
         '''
+<<<<<<< HEAD
         
+=======
+>>>>>>> 22f60357a10e396a035ca18ac2ed295380a8f2a1
         posx = msg.pose.pose.position.x
         posy = msg.pose.pose.position.y
         qx = msg.pose.pose.orientation.x
@@ -38,8 +42,8 @@ class OdoInterp(object):
         qw = msg.pose.pose.orientation.w
         _,_,theta = tf.transformations.euler_from_quaternion((qx, qy, qz, qw))
 
-        self.q.put(['odo', self.odometry_model(posx, posy, theta), self.R])
-        self.last_odom = [posx, posy, theta]
+        self.q.put(['odo', self.odometry_model(posx, -posy, -theta), self.R, [posx, -posy, -theta]])
+        self.last_odom = [posx, -posy, -theta]
 
     def odometry_model(self, posx, posy, theta):
 

@@ -1,16 +1,23 @@
 #!/usr/bin/env python2.7
 
 import matplotlib.pyplot as plt
+import math
 import numpy as np
 import Queue
 import rospy
+<<<<<<< HEAD
 # import thread
+=======
+import display
+import error_study
+>>>>>>> 22f60357a10e396a035ca18ac2ed295380a8f2a1
 
 import EKF_SLAM
-import observations_function as obs
+import observations_function_new as obs
 import odometry_function as odo
 import kill_function as kill
 import slamraposa_ros.slamraposa_node
+<<<<<<< HEAD
 
 
 # def check_for_shutdown(queue, observations, odometry):
@@ -21,6 +28,9 @@ import slamraposa_ros.slamraposa_node
 # def Kill(queue):
 #     print('oi?')
 #     queue.put(['end'])
+=======
+import EKFstopper
+>>>>>>> 22f60357a10e396a035ca18ac2ed295380a8f2a1
 
 def update_noises(observations, odometry, Q, R):
     observations.Q = Q
@@ -31,18 +41,28 @@ def main():
     rospy.init_node('slamraposa', anonymous=False)
 
     q = Queue.Queue()
+<<<<<<< HEAD
     Q = np.identity(3)
     R = np.identity(3)
+=======
+    Q = 100*np.identity(3)
+    R = 100*np.identity(3)
+>>>>>>> 22f60357a10e396a035ca18ac2ed295380a8f2a1
 
     operation = EKF_SLAM.SLAM(q)
 
     observations = obs.ObsInterp(q, Q)
     odometry = odo.OdoInterp(q, R)
+<<<<<<< HEAD
     end = kill.KillInterp(q)
+=======
+    EKFstopper.shutdown(q)
+>>>>>>> 22f60357a10e396a035ca18ac2ed295380a8f2a1
 
     # to plot the results
     x=[]
     y=[]
+<<<<<<< HEAD
 
     plt.ylim((-10,10))
     plt.xlim((-10,10))
@@ -71,6 +91,71 @@ def main():
                 plt.show()
             return
         
+=======
+    x_odo=[]
+    y_odo=[]
+    theta_odo=[]
+    theta=[]
+    pose_cov=[]
+    true_pose=[]
+
+    trajectory_index = 0
+    j = 0
+    shutdown = False
+
+    trajectory = error_study.straightline(0,0,0,1,50,'x')
+    trajectory.extend(error_study.straightline(50, -1, -math.pi/2, -1, 19, 'y'))
+    trajectory.extend(error_study.straightline(49, -20, math.pi, -1, 99, 'x'))
+    trajectory.extend(error_study.straightline(-50, -19, math.pi/2, 1, 19, 'y'))
+    trajectory.extend(error_study.straightline(-50, 0, 0, 1, 49, 'x'))
+    
+
+    first=False
+    while not rospy.is_shutdown() and not shutdown:
+
+        x.append(operation.mean_pred[0][0])
+        y.append(operation.mean_pred[0][1])
+        theta.append(operation.mean_pred[0][2])
+        pose_cov.append(operation.cov_pred[:3,:3])
+        # true_pose.append(trajectory[trajectory_index])
+
+        update_noises(observations, odometry, Q, R)
+
+        event = q.get()     # event = ['obs', markers_I_see, Q]              
+                            # or event = ['odo', position_and_quaternions, R]
+                            # or event = ['end', string, 0]
+        q.task_done()
+
+        if event[0] == 'odo':
+            x_odo.append(event[3][0])
+            y_odo.append(event[3][1])
+            theta_odo.append(event[3][2])
+
+        # if event[0] != 'end':
+        #     if event[0] == 'odo':
+        #         # if first:
+        #             # trajectory_index += 1
+        #         # first=True
+        #     elif event[0] == 'obs':
+        #         pass
+
+        shutdown = operation.EKF(event)
+        j+=1
+                
+
+
+    rospy.loginfo('Terminating EKF-SLAM, wait for the plot')
+    display.landmarks_and_path(x, y, operation.mean_pred, operation.cov_pred, 'include uncertainty', 'real')
+    display.variable_individual_analysis(x_odo, y_odo, theta_odo, x, y, theta)
+    display.odometry(x_odo, y_odo, theta_odo)
+    display.cov_time(pose_cov)
+
+    plt.show()
+
+
+    # error_study.EKFconsistency(x, y, theta, pose_cov, true_pose)
+
+>>>>>>> 22f60357a10e396a035ca18ac2ed295380a8f2a1
 
 if __name__ == '__main__':
     main()

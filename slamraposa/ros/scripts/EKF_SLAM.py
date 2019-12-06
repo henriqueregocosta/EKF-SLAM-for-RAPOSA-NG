@@ -1,5 +1,9 @@
 import math
 import numpy as np
+<<<<<<< HEAD
+=======
+import rospy
+>>>>>>> 22f60357a10e396a035ca18ac2ed295380a8f2a1
 from numpy.linalg import multi_dot
 
 
@@ -9,13 +13,15 @@ class SLAM(object):
         self.mean_pred = [[0, 0, 0]]
         self.cov_pred = np.zeros((3,3))
         self.landmarks_index = {}
+<<<<<<< HEAD
 
+=======
+>>>>>>> 22f60357a10e396a035ca18ac2ed295380a8f2a1
 
     def sum_to_mean_pred(self, array):
         for i in range(len(self.mean_pred)):
             for j in range(3):
                 self.mean_pred[i][j] += float(array[3*i+j])
-
 
     def update_robot_pos(self, event):
         N = len(self.mean_pred) - 1
@@ -40,14 +46,16 @@ class SLAM(object):
         G = np.identity(3*N+3) + multi_dot([Fx.T, g, Fx])
         self.cov_pred = multi_dot([G, self.cov_pred, G.T]) + multi_dot([Fx.T, event[2], Fx])
 
-
     def search_for_landmark(self, z):
         if z[2] in self.landmarks_index:
             return self.landmarks_index[z[2]]
         else:
             return 0
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> 22f60357a10e396a035ca18ac2ed295380a8f2a1
 
     def add_unseen_landmark(self, z):
         theta = self.mean_pred[0][2]
@@ -61,7 +69,6 @@ class SLAM(object):
         self.mean_pred.append(list(update))
         self.cov_pred = np.bmat([[self.cov_pred, np.zeros((len(self.cov_pred),3))],
                                     [np.zeros((3,len(self.cov_pred))), np.identity(3)]]).A
-
 
     def predict_landmark_pos(self, j):
         x_lm = self.mean_pred[j][0]
@@ -77,7 +84,6 @@ class SLAM(object):
         z_pred[2] = self.mean_pred[j][2]
         return z_pred
 
-
     def selection_matrix(self, j, N):    
         if j== N:
             if N == 1:
@@ -92,7 +98,6 @@ class SLAM(object):
                              [np.zeros((3,3*j)), np.identity(3), np.zeros((3,3*N-3*j))]]).A
         return Fx_j
 
-
     def jacobian(self, j):
         x_lm = self.mean_pred[j][0]
         y_lm = self.mean_pred[j][1]
@@ -104,7 +109,6 @@ class SLAM(object):
             [math.sin(theta_r), -math.cos(theta_r), -(x_lm-x_r)*math.cos(theta_r)-(y_lm-y_r)*math.sin(theta_r), -math.sin(theta_r), math.cos(theta_r), 0],
             [0, 0, 0, 0, 0, 1]])
         return h
-
 
     def update_seen_landmarks(self, j, z, Q):
         N = len(self.mean_pred) - 1
@@ -121,11 +125,14 @@ class SLAM(object):
         self.sum_to_mean_pred(np.dot(K, np.expand_dims(z-z_pred, axis=1)))
         self.cov_pred = np.dot(np.identity(len(np.dot(K, H))) - np.dot(K, H), self.cov_pred)
 
-
     def EKF(self, event):
+<<<<<<< HEAD
         print(event)
+=======
+>>>>>>> 22f60357a10e396a035ca18ac2ed295380a8f2a1
         if event[0] == 'odo': # precisa de R e position_and_quaternions
             self.update_robot_pos(event)
+            return False
 
         elif event[0] == 'obs': # precisa de s_I_see, Q
             for z in event[1]: # z = [x y s].T
@@ -134,6 +141,13 @@ class SLAM(object):
                     self.add_unseen_landmark(z)
                     j = len(self.mean_pred) - 1
                 self.update_seen_landmarks(j, z, event[2])
+<<<<<<< HEAD
        
         elif event[0] == 'kill':
             pass
+=======
+            return False
+
+        elif event[0] == 'end':
+            return True
+>>>>>>> 22f60357a10e396a035ca18ac2ed295380a8f2a1
