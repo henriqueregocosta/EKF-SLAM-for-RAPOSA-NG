@@ -4,9 +4,14 @@ from math import pi, cos, sin
 import math
 
 
-def landmarks_and_path(x,y, mean_pred, cov, plot_type):
-    plt.xlim((-60,60))
-    plt.ylim((-60,60))
+def landmarks_and_path(x,y, mean_pred, cov, plot_type, world):
+    plt.figure()
+    if world == 'fake_world':
+        plt.xlim((-60,60))
+        plt.ylim((-60,60))
+    elif world == 'real':
+        plt.xlim((-10,10))
+        plt.ylim((-10,10))
 
     for i in range(1, len(mean_pred)):
         plt.plot(mean_pred[i][0],mean_pred[i][1], 'r+')
@@ -41,15 +46,12 @@ def landmarks_and_path(x,y, mean_pred, cov, plot_type):
             plt.plot( u+Ell_rot[0,:] , v+Ell_rot[1,:],'aqua' )    #rotated ellipse
     
     plt.grid(color='lightgray',linestyle='--')
-    plt.show()
-
-    return
+    plt.show(block=False)
 
 def cov_time(pose_cov):
     
     pose_cov = np.asarray(pose_cov)
     k = np.arange(0,len(pose_cov))
-    print(np.shape(pose_cov))
 
     plt.figure()
     covxp = plt.plot(k, pose_cov[:,0,0], 'b', label='cov_x')
@@ -59,4 +61,44 @@ def cov_time(pose_cov):
     plt.title('Pose covariance over time')
     plt.xlabel('k (time step)')
     plt.ylabel('cov(k)')
-    plt.show()
+    plt.show(block=False)
+
+def variable_individual_analysis(x_odo, y_odo, theta_odo, x, y, theta):
+
+    # analysis of single parameters
+    k = np.arange(0,len(x_odo))
+    k1 = np.arange(0,len(x))
+
+    plt.figure()
+    plt.plot(k, theta_odo, '-b', label='heading odometry')
+    plt.plot(k1, theta, '-.b', label='heading EKF-SLAM')
+    plt.legend(loc="upper right")
+    plt.title('Variable evolution over time')
+    plt.show(block=False)
+
+    plt.figure()
+    plt.plot(k, x_odo, '-c', label='x-coordinate odometry')
+    plt.plot(k1, x, '-.c', label='x-coordinate EKF-SLAM')
+    plt.legend(loc="upper right")
+    plt.title('Variable evolution over time')
+    plt.show(block=False)
+
+    plt.figure()    
+    plt.plot(k, y_odo, '-r', label='y-coordinate odometry')
+    plt.plot(k1, y, '-.r', label='y-coordinate EKF-SLAM')
+
+    plt.legend(loc="upper right")
+    plt.title('Variable evolution over time')
+    plt.show(block=False)
+
+def odometry(x_odo, y_odo, theta_odo):
+    
+    plt.figure()
+
+    plt.plot(x_odo,y_odo)
+    plt.title('Odometry estimated path')
+    plt.xlabel('x')
+    plt.ylabel('y')
+
+    plt.grid(color='lightgray',linestyle='--')
+    plt.show(block=False)

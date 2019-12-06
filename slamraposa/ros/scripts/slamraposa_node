@@ -86,26 +86,18 @@ def main():
         shutdown = operation.EKF(event)
         j+=1
                 
-    # display the trajectory and final landmark estimation
-    k = np.arange(0,len(x_odo))
-    k1 = np.arange(0,len(x))
 
-    plt.plot(k, theta_odo, '-b')
-    plt.plot(k1, y, '-g')
-    plt.plot(k, y_odo, '-r')
-
-    # plt.plot(x_odo, y_odo, '-b')
-    plt.title('Odometry pose over time')
-    plt.xlabel('x')
-    plt.ylabel('y')
-    plt.show()
 
     rospy.loginfo('Terminating EKF-SLAM, wait for the plot')
-    display.landmarks_and_path(x, y, operation.mean_pred, operation.cov_pred, 'include uncertainty')
+    display.landmarks_and_path(x, y, operation.mean_pred, operation.cov_pred, 'include uncertainty', 'real')
+    display.variable_individual_analysis(x_odo, y_odo, theta_odo, x, y, theta)
+    display.odometry(x_odo, y_odo, theta_odo)
     display.cov_time(pose_cov)
-    error_study.EKFconsistency(x, y, theta, pose_cov, true_pose)
 
-    return
+    plt.show()
+
+
+    # error_study.EKFconsistency(x, y, theta, pose_cov, true_pose)
 
 
 if __name__ == '__main__':
