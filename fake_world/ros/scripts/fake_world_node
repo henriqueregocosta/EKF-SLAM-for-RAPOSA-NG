@@ -79,7 +79,7 @@ class robot(object):
         # setup publishers
         self.posePublisher = rospy.Publisher('fake_pose', PoseStamped, queue_size=100000)
         self.obsPublisher = rospy.Publisher('fake_obs',MarkerArray,queue_size=100000)
-        self.odomPublisher = rospy.Publisher('fake_odom',Odometry,queue_size=100000)
+        self.odomPublisher = rospy.Publisher('raposang/odometry_pose',Odometry,queue_size=100000)
         self.now = rospy.Time.now()
 
     def compute_observation(self, landmarks, sim_type, j):

@@ -10,6 +10,7 @@ import error_study
 
 import EKF_SLAM
 import observations_function_new as obs
+import observations_function_new as obs_fakeworld
 import odometry_function as odo
 import kill_function as kill
 import slamraposa_ros.slamraposa_node
@@ -23,13 +24,19 @@ def update_noises(observations, odometry, Q, R):
 def main():
     rospy.init_node('slamraposa', anonymous=False)
 
+    data_type = 'synthetic'
+
     q = Queue.Queue()
     Q = 100*np.identity(3)
     R = 100*np.identity(3)
 
     operation = EKF_SLAM.SLAM(q)
 
-    observations = obs.ObsInterp(q, Q)
+    if data_type == 'real':
+        observations = obs.ObsInterp(q, Q)
+    elif data_type == 'synthetic':
+        observations = obs_fakeworld.ObsInterp(q, Q)
+
     odometry = odo.OdoInterp(q, R)
     EKFstopper.shutdown(q)
 
@@ -89,9 +96,9 @@ def main():
 
 
     rospy.loginfo('Terminating EKF-SLAM, wait for the plot')
-    display.landmarks_and_path(x, y, operation.mean_pred, operation.cov_pred, 'include uncertainty', 'real')
+    display.landmarks_and_path(x, y, operation.mean_pred, operation.cov_pred, 'include uncertainty', data_type)
     display.variable_individual_analysis(x_odo, y_odo, theta_odo, x, y, theta)
-    display.odometry(x_odo, y_odo, theta_odo)
+    display.odometry(x_odo, y_odo, theta_odo, data_type)
     display.cov_time(pose_cov)
 
     plt.show()

@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<!-- Run the aruco_detect node -->
+<launch>
+  <!-- namespace for camera input -->
+  <arg name="camera" default="/camera"/>
+  <arg name="image" default="image"/>
+  <arg name="transport" default="compressed"/>
+  <arg name="fiducial_len" default="0.17"/>
+  <arg name="dictionary" default="7"/>
+  <arg name="do_pose_estimation" default="true"/>
+  <arg name="ignore_fiducials" default="" />
+  <arg name="fiducial_len_override" default="" />
+
+  <node pkg="aruco_detect" name="aruco_detect"
+    type="aruco_detect" output="screen" respawn="false">
+    <param name="publish_images" value="true" />
+    <param name="image_transport" value="raw"/>
+    <param name="publish_images" value="true" />
+    <param name="fiducial_len" value="0.17"/>
+    <param name="dictionary" value="7"/>
+    <param name="do_pose_estimation" value="true"/>
+    <remap from="/camera" 
+        to="/head_camera/rgb/image_raw"/>
+    <remap from="/camera_info" to="/head_camera/rgb/camera_info"/>
+  </node>
+
+  <node name="image_view" pkg="image_view" type="image_view" respawn="false" output="screen">
+    <remap from="image" to="/fiducial_images"/>
+    <param name="autosize" value="true" />
+  </node>
+
+</launch>

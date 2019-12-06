@@ -5,8 +5,9 @@ import math
 
 
 def landmarks_and_path(x,y, mean_pred, cov, plot_type, world):
+
     plt.figure()
-    if world == 'fake_world':
+    if world == 'synthetic':
         plt.xlim((-60,60))
         plt.ylim((-60,60))
     elif world == 'real':
@@ -70,30 +71,36 @@ def variable_individual_analysis(x_odo, y_odo, theta_odo, x, y, theta):
     k1 = np.arange(0,len(x))
 
     plt.figure()
-    plt.plot(k, theta_odo, '-b', label='heading odometry')
-    plt.plot(k1, theta, '-.b', label='heading EKF-SLAM')
+    plt.plot(k, theta_odo, '-k', label='heading odometry')
+    plt.plot(k1, theta, '-.r', label='heading EKF-SLAM')
     plt.legend(loc="upper right")
     plt.title('Variable evolution over time')
     plt.show(block=False)
 
     plt.figure()
-    plt.plot(k, x_odo, '-c', label='x-coordinate odometry')
-    plt.plot(k1, x, '-.c', label='x-coordinate EKF-SLAM')
+    plt.plot(k, x_odo, '-k', label='x-coordinate odometry')
+    plt.plot(k1, x, '-.r', label='x-coordinate EKF-SLAM')
     plt.legend(loc="upper right")
     plt.title('Variable evolution over time')
     plt.show(block=False)
 
     plt.figure()    
-    plt.plot(k, y_odo, '-r', label='y-coordinate odometry')
+    plt.plot(k, y_odo, '-k', label='y-coordinate odometry')
     plt.plot(k1, y, '-.r', label='y-coordinate EKF-SLAM')
 
     plt.legend(loc="upper right")
     plt.title('Variable evolution over time')
     plt.show(block=False)
 
-def odometry(x_odo, y_odo, theta_odo):
+def odometry(x_odo, y_odo, theta_odo, world):
     
     plt.figure()
+    if world == 'synthetic':
+        plt.xlim((-60,60))
+        plt.ylim((-60,60))
+    elif world == 'real':
+        plt.xlim((-10,10))
+        plt.ylim((-10,10))
 
     plt.plot(x_odo,y_odo)
     plt.title('Odometry estimated path')
