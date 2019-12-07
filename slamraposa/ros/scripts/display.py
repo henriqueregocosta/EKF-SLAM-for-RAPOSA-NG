@@ -84,7 +84,7 @@ def cov_time(pose_cov, nr_landmarks_seen, dist):
     p2, = host.plot(k, pose_cov[:,1,1], 'r-', label='cov_y')
     p3, = host.plot(k, pose_cov[:,2,2], 'k-', label='cov_heading')
 
-    p4, = par1.plot(k, nr_landmarks_seen, 'm-', label='nr_landmarks_seen')
+    p4, = par1.plot(k, nr_landmarks_seen, 'm+', label='nr_landmarks_seen')
     p5, = par2.plot(k, dist, 'g-', label='dist')
 
     par1.set_ylim(0, max(nr_landmarks_seen)*2)

@@ -85,7 +85,7 @@ def main():
                 x_odo.append(event[3][0])
                 y_odo.append(event[3][1])
                 theta_odo.append(event[3][2])
-                nr_landmarks_seen.append(0)
+                nr_landmarks_seen.append(-1)
                 if first:
                     trajectory_index += 1
                 first=True
