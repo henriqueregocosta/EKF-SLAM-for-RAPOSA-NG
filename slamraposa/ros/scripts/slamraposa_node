@@ -10,7 +10,7 @@ import error_study
 
 import EKF_SLAM
 import observations_function_new as obs
-import observations_function_new as obs_fakeworld
+import observations_function as obs_fakeworld
 import odometry_function as odo
 import kill_function as kill
 import slamraposa_ros.slamraposa_node
@@ -52,7 +52,7 @@ def main():
     dist=[0]
     nr_landmarks_seen=[0]
 
-    # trajectory_index = 0
+    trajectory_index = 0
     j = 0
     shutdown = False
 
@@ -78,7 +78,6 @@ def main():
                             # or event = ['odo', position_and_quaternions, R]
                             # or event = ['end', string, 0]
         q.task_done()
-
         if event[0] != 'end':
             if event[0] == 'odo':
                 x_odo.append(event[3][0])
@@ -91,12 +90,10 @@ def main():
 
             elif event[0] == 'obs':
                 nr_landmarks_seen.append(len(event[1]))
-        dist.append(trajectory_index)
+            dist.append(trajectory_index)
         shutdown = operation.EKF(event)
         j+=1
                 
-
-
     rospy.loginfo('Terminating EKF-SLAM, wait for the plot')
     display.landmarks_and_path(x, y, operation.mean_pred, operation.cov_pred, 'include uncertainty', data_type)
     display.variable_individual_analysis(x_odo, y_odo, theta_odo, x, y, theta)
