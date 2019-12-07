@@ -25,10 +25,10 @@ def update_noises(observations, odometry, Q, R):
 def main():
     rospy.init_node('slamraposa', anonymous=False)
 
-    data_type = 'synthetic'
+    data_type = 'real'
 
     q = Queue.Queue()
-    Q = 1*np.identity(3)
+    Q = 1000000000000*np.identity(3)
     R = 1*np.identity(3)
 
     operation = EKF_SLAM.SLAM(q)
@@ -85,15 +85,16 @@ def main():
                 x_odo.append(event[3][0])
                 y_odo.append(event[3][1])
                 theta_odo.append(event[3][2])
-                nr_landmarks_seen.append(-1)
+                nr_landmarks_seen.append(-10)
                 if first:
                     trajectory_index += 1
                 first=True
 
             elif event[0] == 'obs':
-                x_odo.append(x_odo[-1])
-                y_odo.append(y_odo[-1])
-                theta_odo.append(theta_odo[-1])
+                if len(x_odo) > 0:
+                    x_odo.append(x_odo[-1])
+                    y_odo.append(y_odo[-1])
+                    theta_odo.append(theta_odo[-1])
                 nr_landmarks_seen.append(len(event[1]))
             dist.append(trajectory_index)
         shutdown = operation.EKF(event)
