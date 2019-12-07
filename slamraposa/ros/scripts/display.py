@@ -49,12 +49,16 @@ def landmarks_and_path(x,y, mean_pred, cov, plot_type, world):
     plt.grid(color='lightgray',linestyle='--')
     plt.show(block=False)
 
-def cov_time(pose_cov):
+def cov_time(pose_cov, nr_landmarks_seen, dist):
     
     pose_cov = np.asarray(pose_cov)
+    nr_landmarks_seen = np.asarray(nr_landmarks_seen)
+    dist = np.asarray(dist)
     k = np.arange(0,len(pose_cov))
 
     plt.figure()
+    ldmkp = plt.plot(k, nr_landmarks_seen, 'p', label='nr_landmarks_seen')
+    distp = plt.plot(k, dist, 'g', label='dist')
     covxp = plt.plot(k, pose_cov[:,0,0], 'b', label='cov_x')
     covyp = plt.plot(k, pose_cov[:,1,1], 'r', label='cov_y')
     covheadingp = plt.plot(k, pose_cov[:,2,2], 'aqua', label='cov_heading')

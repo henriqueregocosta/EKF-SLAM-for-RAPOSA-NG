@@ -49,8 +49,10 @@ def main():
     theta=[]
     pose_cov=[]
     true_pose=[]
+    dist=[0]
+    nr_landmarks_seen=[0]
 
-    trajectory_index = 0
+    # trajectory_index = 0
     j = 0
     shutdown = False
 
@@ -77,19 +79,19 @@ def main():
                             # or event = ['end', string, 0]
         q.task_done()
 
-        if event[0] == 'odo':
-            x_odo.append(event[3][0])
-            y_odo.append(event[3][1])
-            theta_odo.append(event[3][2])
+        if event[0] != 'end':
+            if event[0] == 'odo':
+                x_odo.append(event[3][0])
+                y_odo.append(event[3][1])
+                theta_odo.append(event[3][2])
+                nr_landmarks_seen.append(0)
+                if first:
+                    trajectory_index += 1
+                first=True
 
-        # if event[0] != 'end':
-        #     if event[0] == 'odo':
-        #         # if first:
-        #             # trajectory_index += 1
-        #         # first=True
-        #     elif event[0] == 'obs':
-        #         pass
-
+            elif event[0] == 'obs':
+                nr_landmarks_seen.append(len(event[1]))
+        dist.append(trajectory_index)
         shutdown = operation.EKF(event)
         j+=1
                 
@@ -99,7 +101,7 @@ def main():
     display.landmarks_and_path(x, y, operation.mean_pred, operation.cov_pred, 'include uncertainty', data_type)
     display.variable_individual_analysis(x_odo, y_odo, theta_odo, x, y, theta)
     display.odometry(x_odo, y_odo, theta_odo, data_type)
-    display.cov_time(pose_cov)
+    display.cov_time(pose_cov, nr_landmarks_seen, dist)
 
     plt.show()
 
