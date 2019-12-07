@@ -11,7 +11,8 @@ import error_study
 import EKF_SLAM
 import observations_function_new as obs
 import observations_function as obs_fakeworld
-import odometry_function as odo
+import odometry_function_new as odo
+import odometry_function as odo_fakeworld
 import kill_function as kill
 import slamraposa_ros.slamraposa_node
 import EKFstopper
@@ -27,17 +28,18 @@ def main():
     data_type = 'synthetic'
 
     q = Queue.Queue()
-    Q = 100*np.identity(3)
-    R = 100*np.identity(3)
+    Q = 1*np.identity(3)
+    R = 1*np.identity(3)
 
     operation = EKF_SLAM.SLAM(q)
 
     if data_type == 'real':
         observations = obs.ObsInterp(q, Q)
+        odometry = odo.OdoInterp(q, R)
     elif data_type == 'synthetic':
         observations = obs_fakeworld.ObsInterp(q, Q)
+        odometry = odo_fakeworld.OdoInterp(q, R)
 
-    odometry = odo.OdoInterp(q, R)
     EKFstopper.shutdown(q)
 
     # to plot the results
@@ -89,6 +91,9 @@ def main():
                 first=True
 
             elif event[0] == 'obs':
+                x_odo.append(x_odo[-1])
+                y_odo.append(y_odo[-1])
+                theta_odo.append(theta_odo[-1])
                 nr_landmarks_seen.append(len(event[1]))
             dist.append(trajectory_index)
         shutdown = operation.EKF(event)

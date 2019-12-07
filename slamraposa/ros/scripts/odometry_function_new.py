@@ -38,8 +38,8 @@ class OdoInterp(object):
         qw = msg.pose.pose.orientation.w
         _,_,theta = tf.transformations.euler_from_quaternion((qx, qy, qz, qw))
 
-        self.q.put(['odo', self.odometry_model(posx, posy, theta), self.R, [posx, posy, theta]])
-        self.last_odom = [posx, posy, theta]
+        self.q.put(['odo', self.odometry_model(posx, -posy, -theta), self.R, [posx, -posy, -theta]])
+        self.last_odom = [posx, -posy, -theta]
 
     def odometry_model(self, posx, posy, theta):
 
