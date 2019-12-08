@@ -17,7 +17,7 @@ class OdoInterp(object):
         # subscribe to RaposaNG ARUCO topic
         # raposa topic: raposang/odometry_pose
         # fake_world topic: fake_odom
-        self.subs = rospy.Subscriber("raposang/odometry_pose", Odometry, self.ODOCallback)
+        self.subs = rospy.Subscriber("fake_odom", Odometry, self.ODOCallback)
         # define member variable and initialize with a big value
         # it will store the distance from the robot to the walls
         

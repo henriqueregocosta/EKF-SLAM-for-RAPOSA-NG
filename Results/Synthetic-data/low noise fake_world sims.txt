@@ -1,0 +1,36 @@
+low noise fake_world sims
+
+for all odo sims
+z[0]=z[0]+random.gauss(0,0.05)
+z[1]=z[1]+random.gauss(0,0.05)
+z[2]=z[2]
+
+movement[0]=movement[0]+random.gauss(0,0.1)
+movement[1]=movement[1]+random.gauss(0,0.1)
+movement[2]=movement[2]+random.gauss(0,2*math.pi/180)
+
+heading noise fake_world sims
+movement[0]=movement[0]+random.gauss(0,0.1)
+movement[1]=movement[1]+random.gauss(0,0.1)
+movement[2]=movement[2]+random.gauss(0,6*math.pi/180)
+
+odom noise fake_world sims
+movement[0]=movement[0]+random.gauss(0,0.8)
+movement[1]=movement[1]+random.gauss(0,0.8)
+movement[2]=movement[2]+random.gauss(0,2*math.pi/180)
+
+observation noise sims
+z[0]=z[0]+random.gauss(0,1)
+z[1]=z[1]+random.gauss(0,1)
+z[2]=z[2]
+
+catastrophic noise sim
+odom noise fake_world sims
+movement[0]=movement[0]+random.gauss(0,1)
+movement[1]=movement[1]+random.gauss(0,1)
+movement[2]=movement[2]+random.gauss(0,6*math.pi/180)
+
+observation noise sims
+z[0]=z[0]+random.gauss(0,1)
+z[1]=z[1]+random.gauss(0,1)
+z[2]=z[2]

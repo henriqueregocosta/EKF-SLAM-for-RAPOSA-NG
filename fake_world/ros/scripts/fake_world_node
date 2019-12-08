@@ -33,7 +33,10 @@ class fake_world(object):
 
         # for the plot, adjust accordingly to world_type
         plt.xlim((-60,60))
-        plt.ylim((-60,60))
+        plt.ylim((-40,20))
+        plt.axes().set_aspect('equal')
+        plt.xticks(size = 20)
+        plt.yticks(size = 20)
 
         freq = 50
         rate = rospy.Rate(freq)
@@ -79,7 +82,7 @@ class robot(object):
         # setup publishers
         self.posePublisher = rospy.Publisher('fake_pose', PoseStamped, queue_size=100000)
         self.obsPublisher = rospy.Publisher('fake_obs',MarkerArray,queue_size=100000)
-        self.odomPublisher = rospy.Publisher('raposang/odometry_pose',Odometry,queue_size=100000)
+        self.odomPublisher = rospy.Publisher('fake_odom',Odometry,queue_size=100000)
         self.now = rospy.Time.now()
 
     def compute_observation(self, landmarks, sim_type, j):
@@ -112,9 +115,16 @@ class robot(object):
                 # dist = math.sqrt(z[0]**2+z[1]**2)
                 # z[0]=z[0]+random.gauss(0,dist*0.05)
                 # z[1]=z[1]+random.gauss(0,dist*0.05)
+
+                #normal test
                 z[0]=z[0]+random.gauss(0,0.05)
                 z[1]=z[1]+random.gauss(0,0.05)
                 z[2]=z[2]
+
+                # catastrophic noise testing
+                # z[0]=z[0]+random.gauss(0,1)
+                # z[1]=z[1]+random.gauss(0,1)
+                # z[2]=z[2]
 
             if self.is_in_line_of_sight(z):
                 observation.append(z)
@@ -187,9 +197,16 @@ class robot(object):
         movement[2] = trajectory[j][2]
 
         if sim_type == 'noisy':
+            # normal test
             movement[0]=movement[0]+random.gauss(0,0.1)
             movement[1]=movement[1]+random.gauss(0,0.1)
             movement[2]=movement[2]+random.gauss(0,2*math.pi/180)
+
+            # very noisy test
+            # movement[0]=movement[0]+random.gauss(0,0.8)
+            # movement[1]=movement[1]+random.gauss(0,0.8)
+            # movement[2]=movement[2]+random.gauss(0,6*math.pi/180)
+
 
         self.translate_odom(movement,j)
 
@@ -370,7 +387,7 @@ def circle(n):
 def main():
     fake_world1=fake_world()
     robot1=robot()
-    fake_world1.run_sim('world5', robot1)
+    fake_world1.run_sim('world6', robot1)
 
 if __name__ == '__main__':
     main()

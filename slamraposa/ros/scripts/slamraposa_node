@@ -25,10 +25,11 @@ def update_noises(observations, odometry, Q, R):
 def main():
     rospy.init_node('slamraposa', anonymous=False)
 
-    data_type = 'real'
+    data_type = 'synthetic'
 
     q = Queue.Queue()
-    Q = 100000*np.identity(3)
+    Q = np.identity(3)
+    # Q = 100000*np.identity(3) # use this if aruco is noisy
     R = 1*np.identity(3)
 
     operation = EKF_SLAM.SLAM(q)
@@ -102,6 +103,7 @@ def main():
                 
     rospy.loginfo('Terminating EKF-SLAM, wait for the plot')
     display.landmarks_and_path(x, y, operation.mean_pred, operation.cov_pred, 'include uncertainty', data_type)
+    display.path_and_odometry(x, y, operation.mean_pred, x_odo, y_odo, operation.cov_pred, 'include uncertainty', data_type)
     display.variable_individual_analysis(x_odo, y_odo, theta_odo, x, y, theta)
     display.odometry(x_odo, y_odo, theta_odo, data_type)
     display.cov_time(pose_cov, nr_landmarks_seen, dist)
