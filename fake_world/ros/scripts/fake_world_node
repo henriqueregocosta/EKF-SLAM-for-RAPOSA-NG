@@ -200,7 +200,7 @@ class robot(object):
             # normal test
             movement[0]=movement[0]+random.gauss(0,0.1)
             movement[1]=movement[1]+random.gauss(0,0.1)
-            movement[2]=movement[2]+random.gauss(0,2*math.pi/180)
+            movement[2]=movement[2]+random.gauss(0,(15*math.pi/180)**2)
 
             # very noisy test
             # movement[0]=movement[0]+random.gauss(0,0.8)
@@ -387,7 +387,7 @@ def circle(n):
 def main():
     fake_world1=fake_world()
     robot1=robot()
-    fake_world1.run_sim('world6', robot1)
+    fake_world1.run_sim('world5', robot1)
 
 if __name__ == '__main__':
     main()

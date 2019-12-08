@@ -75,47 +75,47 @@ def cov_time(pose_cov, nr_landmarks_seen, dist):
     fig.subplots_adjust(right=0.75)
 
     par1 = host.twinx()
-    #par2 = host.twinx()
+    par2 = host.twinx()
 
     # Offset the right spine of par2.  The ticks and label have already been
     # placed on the right by twinx above.
-    #par2.spines["right"].set_position(("axes", 1.2))
+    par2.spines["right"].set_position(("axes", 1.2))
     # Having been created by twinx, par2 has its frame off, so the line of its
     # detached spine is invisible.  First, activate the frame but make the patch
     # and spines invisible.
     #make_patch_spines_invisible(par2)
     # Second, show the right spine.
-    #par2.spines["right"].set_visible(True)
+    par2.spines["right"].set_visible(True)
 
     p1, = host.plot(k, pose_cov[:,0,0], 'b-', label='cov_x')
     p2, = host.plot(k, pose_cov[:,1,1], 'r-', label='cov_y')
     p3, = host.plot(k, pose_cov[:,2,2], 'k-', label='cov_heading')
 
     p4, = par1.plot(k, nr_landmarks_seen, 'm+', label='nr_landmarks_seen')
-    # p5, = par2.plot(k, dist, 'g-', label='dist')
+    p5, = par2.plot(k, dist, 'g-', label='dist')
 
     par1.set_ylim(0, max(nr_landmarks_seen)*2)
 
     host.set_xlabel("Iteration, k")
     host.set_ylabel("Covariance")
     par1.set_ylabel("Nr of landmarks seen")
-    # par2.set_ylabel("Distance")
+    par2.set_ylabel("Distance")
 
     host.yaxis.label.set_color(p3.get_color())
     par1.yaxis.label.set_color(p4.get_color())
-    # par2.yaxis.label.set_color(p5.get_color())
+    par2.yaxis.label.set_color(p5.get_color())
 
     tkw = dict(size=4, width=1.5)
     host.tick_params(axis='y', colors=p3.get_color(), **tkw)
     par1.tick_params(axis='y', colors=p4.get_color(), **tkw)
-    # par2.tick_params(axis='y', colors=p5.get_color(), **tkw)
-    # host.tick_params(axis='x', **tkw)
+    par2.tick_params(axis='y', colors=p5.get_color(), **tkw)
+    host.tick_params(axis='x', **tkw)
 
     lines = [p1, p2, p3]
 
     host.legend(lines, [l.get_label() for l in lines], loc='upper left')
 
-    plt.show()
+    plt.show(block=False)
 
 def variable_individual_analysis(x_odo, y_odo, theta_odo, x, y, theta):
 
@@ -237,3 +237,16 @@ def uncertainty_ellipse(i, last_cov):
     b = sigmaxx*math.cos(t)**2 - 2*sigmaxy*math.cos(t)*math.sin(t)+sigmayy*math.sin(t)**2
 
     return a, b, t
+
+def cov_time_lm(lm_cov):
+    
+    plt.figure()
+    lm_cov = np.asarray(lm_cov)
+    k = np.arange(0,len(lm_cov))
+
+    plt.plot(k, lm_cov[:,0], 'b-', label='cov_(xi)')
+    plt.plot(k, lm_cov[:,1], 'r-', label='cov_(yi)')
+
+    plt.legend(loc="upper right")
+    plt.title('First landmark covariance over time')
+    plt.show(block=False)
