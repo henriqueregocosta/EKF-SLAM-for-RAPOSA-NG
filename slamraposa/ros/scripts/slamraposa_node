@@ -28,7 +28,7 @@ def main():
     data_type = 'real'
 
     q = Queue.Queue()
-    Q = 1000000000000*np.identity(3)
+    Q = 100000*np.identity(3)
     R = 1*np.identity(3)
 
     operation = EKF_SLAM.SLAM(q)
